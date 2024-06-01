@@ -95,4 +95,22 @@ export namespace Protocol {
   export interface CreateChannelResponse {
     newChannel: Channel;
   }
+  export interface JoinChannelResponse {
+    success: boolean;
+  }
+
+  export interface GetParticipantsRequest {
+    channelId: string;
+  }
+
+  export interface GetParticipantsResponse {
+    participants: User[];
+  }
+
+  export interface WSMessage {
+    senderId: string;
+    roomId: string;
+    type: "join" | "leave" | "text" | "voice" | "video";
+    data: string;
+  }
 }

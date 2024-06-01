@@ -29,7 +29,23 @@ const LoginScreen = ({ onLoginSuccess, onSignUpSuccess }: LoginScreenProps) => {
           onLoginSuccess(res as Protocol.LoginResponse);
         }}
       >
-        BACKDOOR
+        Login as a
+      </button>
+      <button
+        onClick={async () => {
+          const res = await ApiClient.login({
+            name: "b",
+            password: "b",
+          });
+          if (errorOf(res)) {
+            alert(errorOf(res)?.message);
+            return;
+          }
+          console.log("Login response", res as Protocol.LoginResponse);
+          onLoginSuccess(res as Protocol.LoginResponse);
+        }}
+      >
+        Login as b
       </button>
       <input
         type="text"

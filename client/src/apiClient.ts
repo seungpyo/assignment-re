@@ -1,4 +1,5 @@
 import { Channel, Protocol } from "@seungpyo.hong/netpro-hw/dist/types";
+import { channel } from "diagnostics_channel";
 let token: string | null = null;
 export namespace ApiClient {
   const apiUrl = "http://localhost:5000";
@@ -92,6 +93,31 @@ export namespace ApiClient {
       },
       body: JSON.stringify(delta),
     });
+    return response.json();
+  };
+
+  export const joinChannel = async ({ channelId }: { channelId: string }) => {
+    const response = await fetch(`${apiUrl}/channels/${channelId}/join`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.json();
+  };
+
+  export const getParticipants = async ({
+    channelId,
+  }: Protocol.GetParticipantsRequest) => {
+    const response = await fetch(
+      `${apiUrl}/participants?channelId=${channelId}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
     return response.json();
   };
 }

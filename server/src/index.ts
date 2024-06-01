@@ -1,8 +1,7 @@
 import express from "express";
 import { createServer } from "http";
-import { Server } from "ws";
+import WebSocket, { Server } from "ws";
 import path from "path";
-import { read } from "fs";
 import { readDB, writeDB } from "./utils";
 import {
   uuid,
@@ -15,6 +14,7 @@ import {
 const app = express();
 const server = createServer(app);
 const wss = new Server({ server });
+const websocketOfChannel: { [userId: string]: WebSocket[] } = {};
 
 app.use(express.static(path.resolve(__dirname, "../../client/build")));
 app.use(express.json());
@@ -55,14 +55,59 @@ app.use((req, res, next) => {
   next();
 });
 
-wss.on("connection", (ws) => {
-  console.log("Client connected");
-  ws.on("message", (message) => {
-    console.log("received: %s", message);
-    ws.send(`You said: ${message}`);
-  });
-  ws.on("close", () => {
-    console.log("Client disconnected");
+wss.on("connection", (ws, req) => {
+  const urlSearchParams = new URLSearchParams(req.url?.split("?")[1]);
+  const channelId = urlSearchParams.get("channelId");
+  if (!channelId) {
+    console.error("No userId in query params");
+    ws.close();
+    return;
+  }
+  const wsTokenId = urlSearchParams.get("wsTokenId");
+  if (!wsTokenId) {
+    console.error("No wsToken in query params");
+    ws.close(4001, "No wsToken in query params");
+    return;
+  }
+  const db: DB = readDB() ?? {
+    users: [],
+    channels: [],
+    messages: [],
+    tokens: [],
+  };
+  const wsToken = db.tokens.find((t) => t.id === wsTokenId);
+  if (!wsToken) {
+    console.error("No wsToken found");
+    ws.close(4002, "Token not found");
+    return;
+  }
+  if (new Date(wsToken.expiresAt) < new Date()) {
+    console.error("wsToken expired");
+    ws.close(4002, "Expired");
+    return;
+  }
+  const channel = db.channels.find((c) => c.id === channelId);
+  if (!channel) {
+    console.error("Channel not found");
+    ws.close(4003, "Channel not found");
+    return;
+  }
+  if (!channel.participants.some((p) => p.id === wsToken.userId)) {
+    console.error("User not in channel");
+    ws.close(4004, "User not in channel");
+    return;
+  }
+  if (!websocketOfChannel[channel.id]) {
+    websocketOfChannel[channel.id] = [];
+  }
+  websocketOfChannel[channel.id].push(ws);
+
+  ws.on("message", (data) => {
+    const wsMessage: Protocol.WSMessage = JSON.parse(data.toString());
+    const others = websocketOfChannel[channel.id].filter((w) => w !== ws);
+    others.forEach((dst) => {
+      dst.send(JSON.stringify(wsMessage));
+    });
   });
 });
 
@@ -203,6 +248,69 @@ app.put("/channels/:channelId", (req, res) => {
   Object.assign(channel, delta);
   writeDB(db);
   res.json({});
+});
+
+app.get("/participants", (req, res) => {
+  const { channelId } = req.query;
+  if (!channelId) {
+    const e: Protocol.ErrorResponse = {
+      statusCode: 400,
+      message: "Missing required field: channelId",
+    };
+    return res.status(400).json(e);
+  }
+  const db: DB = res.locals.db;
+  const channel = db.channels.find((c) => c.id === channelId);
+  if (!channel) {
+    const e: Protocol.ErrorResponse = {
+      statusCode: 404,
+      message: "Channel not found",
+    };
+    return res.status(404).json(e);
+  }
+  if (!channel.participants.some((p) => p.id === res.locals.userId)) {
+    const e: Protocol.ErrorResponse = {
+      statusCode: 403,
+      message: "Forbidden",
+    };
+    return res.status(403).json(e);
+  }
+  const r: Protocol.GetParticipantsResponse = {
+    participants: channel.participants,
+  };
+  res.json(r);
+});
+
+app.post("/channels/:channelId/join", (req, res) => {
+  const { channelId } = req.params;
+  const { userId } = res.locals;
+  const db: DB = res.locals.db;
+  const user = db.users.find((u) => u.id === userId);
+  if (!user) {
+    const e: Protocol.ErrorResponse = {
+      statusCode: 404,
+      message: "User not found",
+    };
+    return res.status(404).json(e);
+  }
+  const channel = db.channels.find((c) => c.id === channelId);
+  if (!channel) {
+    const e: Protocol.ErrorResponse = {
+      statusCode: 404,
+      message: "Channel not found",
+    };
+    return res.status(404).json(e);
+  }
+  if (channel.participants.some((p) => p.id === res.locals.userId)) {
+    const e: Protocol.ErrorResponse = {
+      statusCode: 409,
+      message: "Already in channel",
+    };
+    return res.status(409).json(e);
+  }
+  channel.participants.push(user);
+  writeDB(db);
+  res.json({ sucess: true });
 });
 
 app.get("/", (req, res) => {
