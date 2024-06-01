@@ -4,7 +4,13 @@ import { Server } from "ws";
 import path from "path";
 import { read } from "fs";
 import { readDB, writeDB } from "./utils";
-import { uuid, DB, Protocol, AuthToken } from "@seungpyo.hong/netpro-hw";
+import {
+  uuid,
+  DB,
+  Protocol,
+  AuthToken,
+  Channel,
+} from "@seungpyo.hong/netpro-hw";
 
 const app = express();
 const server = createServer(app);
@@ -45,6 +51,7 @@ app.use((req, res, next) => {
     };
     return res.status(401).json(e);
   }
+  res.locals.userId = match.userId;
   next();
 });
 
@@ -57,18 +64,6 @@ wss.on("connection", (ws) => {
   ws.on("close", () => {
     console.log("Client disconnected");
   });
-});
-
-app.get("/", (req, res) => {
-  res.sendFile(path.resolve(__dirname, "../../client/build", "index.html"));
-});
-
-app.get("*", (req, res) => {
-  const e: Protocol.ErrorResponse = {
-    statusCode: 404,
-    message: "Not found",
-  };
-  res.status(404).send(e);
 });
 
 app.post("/login", (req, res) => {
@@ -88,18 +83,23 @@ app.post("/login", (req, res) => {
   }
   const token: AuthToken = {
     id: uuid(),
+    userId: match.id,
     expiresAt: new Date(Date.now() + 1000 * 60 * 60).toISOString(),
   };
   db.tokens.push(token);
   writeDB(db);
-  const r: Protocol.LoginResponse = { token: token.id };
+  const r: Protocol.LoginResponse = {
+    id: match.id,
+    name: match.name,
+    email: match.email,
+    token: token.id,
+  };
   res.json(r);
 });
 
 app.post("/logout", (req, res) => {
-  const { token } = req.body as Protocol.LogoutRequest;
   const db: DB = res.locals.db;
-  const index = db.tokens.findIndex((t) => t.id === token);
+  const index = db.tokens.findIndex((t) => t.userId === res.locals.userId);
   if (index === -1) {
     const e: Protocol.ErrorResponse = {
       statusCode: 401,
@@ -135,5 +135,65 @@ app.post("/signup", (req, res) => {
   res.json(r);
 });
 
+app.get("/channels", (req, res) => {
+  const db: DB = res.locals.db;
+  const channels = db.channels.filter((c) => {
+    c.participants.some((p) => p.id === res.locals.userId);
+  });
+  const r: Protocol.GetChannelsResponse = { channels };
+  res.json(r);
+});
+
+app.post("/channels", (req, res) => {
+  const { name, creator } = req.body as Protocol.CreateChannelRequest;
+  const db: DB = res.locals.db;
+  const newChannel: Channel = {
+    id: uuid(),
+    name,
+    participants: [creator],
+    messages: [],
+  };
+  db.channels.push(newChannel);
+  writeDB(db);
+  const r: Protocol.CreateChannelResponse = { newChannel };
+  res.json(r);
+});
+
+app.put("/channels/:channelId", (req, res) => {
+  const { channelId } = req.params;
+  const { userId } = res.locals;
+  const db: DB = res.locals.db;
+  const channel = db.channels.find((c) => c.id === channelId);
+  if (!channel) {
+    const e: Protocol.ErrorResponse = {
+      statusCode: 404,
+      message: "Channel not found",
+    };
+    return res.status(404).json(e);
+  }
+  if (!channel.participants.some((p) => p.id === userId)) {
+    const e: Protocol.ErrorResponse = {
+      statusCode: 403,
+      message: "Forbidden",
+    };
+    return res.status(403).json(e);
+  }
+  const delta: Partial<Channel> = req.body;
+  Object.assign(channel, delta);
+  writeDB(db);
+  res.json({});
+});
+
+app.get("/", (req, res) => {
+  res.sendFile(path.resolve(__dirname, "../../client/build", "index.html"));
+});
+
+app.get("*", (req, res) => {
+  const e: Protocol.ErrorResponse = {
+    statusCode: 404,
+    message: `Not found: ${req.path}`,
+  };
+  res.status(404).send(e);
+});
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));

@@ -1,4 +1,4 @@
-import { Protocol } from "@seungpyo.hong/netpro-hw/dist/types";
+import { Channel, Protocol } from "@seungpyo.hong/netpro-hw/dist/types";
 let token: string | null = null;
 export namespace ApiClient {
   const apiUrl = "http://localhost:5000";
@@ -7,7 +7,7 @@ export namespace ApiClient {
   };
   export const getToken = () => token;
   export const login = async ({
-    id,
+    name,
     password,
   }: Protocol.LoginRequest): Promise<
     Protocol.LoginResponse | Protocol.ErrorResponse
@@ -17,21 +17,20 @@ export namespace ApiClient {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ id, password }),
+      body: JSON.stringify({ name, password }),
     });
     return response.json();
   };
-  export const logout = async ({
-    token,
-  }: Protocol.LogoutRequest): Promise<
+  export const logout = async (): Promise<
     Protocol.LogoutResponse | Protocol.ErrorResponse
   > => {
     const response = await fetch(`${apiUrl}/logout`, {
       method: "POST",
       headers: {
+        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ token }),
+      body: JSON.stringify({}),
     });
     return response.json();
   };
@@ -48,6 +47,49 @@ export namespace ApiClient {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ name, email, password }),
+    });
+    return response.json();
+  };
+
+  export const getChannels = async (): Promise<
+    Protocol.GetChannelsResponse | Protocol.ErrorResponse
+  > => {
+    const response = await fetch(`${apiUrl}/channels`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.json();
+  };
+
+  export const createChannel = async ({
+    name,
+  }: Pick<Channel, "name">): Promise<
+    Protocol.CreateChannelResponse | Protocol.ErrorResponse
+  > => {
+    const response = await fetch(`${apiUrl}/channels`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ name }),
+    });
+    return response.json();
+  };
+
+  export const updateChannel = async (
+    channelId: string,
+    delta: Partial<Channel>
+  ): Promise<{} | Protocol.ErrorResponse> => {
+    const response = await fetch(`${apiUrl}/channels/${channelId}`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(delta),
     });
     return response.json();
   };

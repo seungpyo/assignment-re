@@ -3,22 +3,38 @@ import { ApiClient } from "./apiClient";
 import { errorOf, Protocol } from "@seungpyo.hong/netpro-hw";
 
 export interface LoginScreenProps {
-  onLoginSuccess: () => void;
+  onLoginSuccess: (me: Protocol.LoginResponse) => void;
   onSignUpSuccess: () => void;
 }
 
 const LoginScreen = ({ onLoginSuccess, onSignUpSuccess }: LoginScreenProps) => {
-  const [id, setId] = useState("");
+  const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [email, setEmail] = useState("");
   return (
     <div>
       <h1>Login</h1>
-      <h2> ID </h2>
+      <h2> Name </h2>
+      <button
+        onClick={async () => {
+          const res = await ApiClient.login({
+            name: "a",
+            password: "a",
+          });
+          if (errorOf(res)) {
+            alert(errorOf(res)?.message);
+            return;
+          }
+          const me = res as Protocol.LoginResponse;
+          onLoginSuccess(me);
+        }}
+      >
+        BACKDOOR
+      </button>
       <input
         type="text"
-        placeholder="ID"
-        onChange={(e) => setId(e.target.value)}
+        placeholder="Name"
+        onChange={(e) => setName(e.target.value)}
       />
       <h2> Password </h2>
       <input
@@ -34,13 +50,13 @@ const LoginScreen = ({ onLoginSuccess, onSignUpSuccess }: LoginScreenProps) => {
       />
       <button
         onClick={async () => {
-          const token = await ApiClient.login({ id, password });
-          if (errorOf(token)) {
-            alert(errorOf(token)?.message);
+          const res = await ApiClient.login({ name, password });
+          if (errorOf(res)) {
+            alert(errorOf(res)?.message);
             return;
           }
-          ApiClient.setToken((token as Protocol.LoginResponse).token);
-          onLoginSuccess();
+          const me = res as Protocol.LoginResponse;
+          onLoginSuccess(me);
         }}
       >
         Login
@@ -48,7 +64,7 @@ const LoginScreen = ({ onLoginSuccess, onSignUpSuccess }: LoginScreenProps) => {
       <button
         onClick={async () => {
           const response = await ApiClient.signUp({
-            name: id,
+            name,
             email,
             password,
           });

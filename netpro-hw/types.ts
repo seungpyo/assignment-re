@@ -1,3 +1,5 @@
+// No token in Request interfaces, as it is passed in headers
+
 export interface User {
   id: string;
   name: string;
@@ -20,6 +22,7 @@ export interface Message {
 
 export interface AuthToken {
   id: string;
+  userId: string;
   expiresAt: string;
 }
 
@@ -32,15 +35,11 @@ export interface DB {
 
 export namespace Protocol {
   export interface LoginRequest {
-    id: string;
+    name: string;
     password: string;
   }
 
-  export interface LoginResponse {
-    token: string;
-  }
-
-  export interface LogoutRequest {
+  export interface LoginResponse extends Pick<User, "id" | "name" | "email"> {
     token: string;
   }
 
@@ -58,16 +57,11 @@ export namespace Protocol {
     success: boolean;
   }
 
-  export interface GetChannelsRequest {
-    token: string;
-  }
-
   export interface GetChannelsResponse {
     channels: Channel[];
   }
 
   export interface GetMessagesRequest {
-    token: string;
     channelId: string;
   }
 
@@ -76,7 +70,6 @@ export namespace Protocol {
   }
 
   export interface SendMessageRequest {
-    token: string;
     channelId: string;
     content: string;
   }
@@ -88,5 +81,14 @@ export namespace Protocol {
   export interface ErrorResponse {
     statusCode: number;
     message: string;
+  }
+
+  export interface CreateChannelRequest {
+    name: string;
+    creator: User;
+  }
+
+  export interface CreateChannelResponse {
+    newChannel: Channel;
   }
 }

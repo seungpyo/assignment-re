@@ -7,7 +7,8 @@
     "client": "cd client && yarn start",
     "build-server": "cd server && yarn build",
     "build-client": "cd client && yarn build",
-    "quick-upgrade": "cd client && yarn upgrade @seungpyo.hong/netpro-hw && cd .. && cd server && yarn upgrade @seungpyo.hong/netpro-hw && cd .."
+    "quick-publish": "cd netpro-hw && yarn build && yarn publish && cd .. && yarn quick-install",
+    "quick-install": "cd client && yarn upgrade @seungpyo.hong/netpro-hw && cd .. && cd server && yarn upgrade @seungpyo.hong/netpro-hw && cd .."
   },
   "devDependencies": {
     "@types/uuid": "^9.0.8",
