@@ -1,0 +1,23 @@
+{
+  "name": "@seungpyo.hong/netpro-hw",
+  "version": "1.0.6",
+  "main": "dist/index.js",
+  "types": "index.d.ts",
+  "files": [
+    "*.ts",
+    "*.d.ts"
+  ],
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/uuid": "^9.0.8",
+    "typescript": "^4.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
