@@ -3,13 +3,14 @@
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "../",
-    "jsx": "react",
+    "jsx": "react-jsx",
     "lib": ["dom", "es2017"],
     "module": "esnext",
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "skipLibCheck": true,
-    "target": "es5"
+    "target": "es5",
+    "baseUrl": ".",
   },
-  "include": ["src", "../shared"]
+  "include": ["src"]
 }

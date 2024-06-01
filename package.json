@@ -2,10 +2,12 @@
   "name": "my-discord-clone",
   "version": "1.0.0",
   "scripts": {
-    "start": "npm run build-client && concurrently \"npm run server\" \"npm run client\"",
-    "server": "nodemon",
-    "client": "npm start --prefix client",
-    "build-client": "npm run build --prefix client"
+    "start": "yarn build-client && yarn build-server && yarn server",
+    "server": "cd server && yarn start",
+    "client": "cd client && yarn start",
+    "build-server": "cd server && yarn build",
+    "build-client": "cd client && yarn build",
+    "quick-upgrade": "cd client && yarn upgrade @seungpyo.hong/netpro-hw && cd .. && cd server && yarn upgrade @seungpyo.hong/netpro-hw && cd .."
   },
   "devDependencies": {
     "@types/uuid": "^9.0.8",
@@ -13,6 +15,7 @@
     "nodemon": "^2.0.22"
   },
   "dependencies": {
+    "@craco/craco": "^7.1.0",
     "uuid": "^9.0.1"
   }
 }

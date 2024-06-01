@@ -4,12 +4,14 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc",
+    "start": "nodemon"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@seungpyo.hong/netpro-hw": "^1.0.8",
     "@types/express": "^4.17.21",
     "@types/node": "^20.13.0",
     "@types/ws": "^8.5.10",
