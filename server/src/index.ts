@@ -72,12 +72,14 @@ app.get("*", (req, res) => {
 });
 
 app.post("/login", (req, res) => {
-  const { id, password } = req.body as Protocol.LoginRequest;
+  const { name, password } = req.body as Protocol.LoginRequest;
   const db: DB = res.locals.db;
   const match = db.users.find(
-    (user) => user.id === id && user.password === password
+    (user) => user.name === name && user.password === password
   );
   if (!match) {
+    console.debug("Login failed:", name, password);
+    console.debug("Users:", db.users);
     const e: Protocol.ErrorResponse = {
       statusCode: 401,
       message: "Invalid credentials",
@@ -118,8 +120,14 @@ app.post("/signup", (req, res) => {
   const db: DB = res.locals.db;
   const match = db.users.find((user) => user.email === email);
   if (match) {
-    return res.status(409).json({ error: "Email already in use" });
+    const e: Protocol.ErrorResponse = {
+      statusCode: 409,
+      message: "Email already in use",
+    };
+    return res.status(409).json(e);
   }
+  console.debug(`users: ${db.users}`);
+  console.debug(`Got name: ${name}, email: ${email}, password: ${password}`);
   const user = { id: uuid(), name, email, password };
   db.users.push(user);
   writeDB(db);
