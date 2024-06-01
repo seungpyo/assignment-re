@@ -1,0 +1,14 @@
+{
+  "name": "my-discord-clone",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "npm run build-client && concurrently \"npm run server\" \"npm run client\"",
+    "server": "nodemon",
+    "client": "npm start --prefix client",
+    "build-client": "npm run build --prefix client"
+  },
+  "devDependencies": {
+    "concurrently": "^6.5.1",
+    "nodemon": "^2.0.22"
+  }
+}
