@@ -28,9 +28,9 @@
     "@jridgewell/sourcemap-codec" "^1.4.10"
 
 "@seungpyo.hong/netpro-hw@^1.0.8":
-  version "1.0.19"
-  resolved "https://registry.yarnpkg.com/@seungpyo.hong/netpro-hw/-/netpro-hw-1.0.19.tgz#6922ff944b58d3dea1c934f06a9f8256674361f1"
-  integrity sha512-oIJWcZo70Q8e6p0nmYLICVR54X35rseHnlsi5Pgj7u0MdrHaTqmT8EHmyRjE1q85iJTOnY+UObAYukZII0VaSg==
+  version "1.0.22"
+  resolved "https://registry.yarnpkg.com/@seungpyo.hong/netpro-hw/-/netpro-hw-1.0.22.tgz#faf9c44d4b649d899df046ff8440832ab0c1153c"
+  integrity sha512-f1j628FOhGHZc9QdJA8nu++tRNKS0BntNYx8zfAH79PdGaPFv2b7T0T6ibYOfq522JxoBArzql38xobS/CvkJw==
   dependencies:
     uuid "^9.0.1"
 

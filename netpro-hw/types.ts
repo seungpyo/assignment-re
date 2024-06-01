@@ -4,6 +4,9 @@ export interface User {
   id: string;
   name: string;
   email: string;
+}
+
+export interface UserPassword extends User {
   password: string;
 }
 
@@ -27,7 +30,7 @@ export interface AuthToken {
 }
 
 export interface DB {
-  users: User[];
+  users: UserPassword[];
   channels: Channel[];
   messages: Message[];
   tokens: AuthToken[];
@@ -39,7 +42,8 @@ export namespace Protocol {
     password: string;
   }
 
-  export interface LoginResponse extends Pick<User, "id" | "name" | "email"> {
+  export interface LoginResponse {
+    user: User;
     token: string;
   }
 

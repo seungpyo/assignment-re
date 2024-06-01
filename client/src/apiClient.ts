@@ -65,7 +65,8 @@ export namespace ApiClient {
 
   export const createChannel = async ({
     name,
-  }: Pick<Channel, "name">): Promise<
+    creator,
+  }: Protocol.CreateChannelRequest): Promise<
     Protocol.CreateChannelResponse | Protocol.ErrorResponse
   > => {
     const response = await fetch(`${apiUrl}/channels`, {
@@ -74,7 +75,7 @@ export namespace ApiClient {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ name }),
+      body: JSON.stringify({ name, creator }),
     });
     return response.json();
   };

@@ -89,11 +89,14 @@ app.post("/login", (req, res) => {
   db.tokens.push(token);
   writeDB(db);
   const r: Protocol.LoginResponse = {
-    id: match.id,
-    name: match.name,
-    email: match.email,
+    user: {
+      id: match.id,
+      name: match.name,
+      email: match.email,
+    },
     token: token.id,
   };
+  console.debug("Login success:", r);
   res.json(r);
 });
 
@@ -137,15 +140,33 @@ app.post("/signup", (req, res) => {
 
 app.get("/channels", (req, res) => {
   const db: DB = res.locals.db;
-  const channels = db.channels.filter((c) => {
-    c.participants.some((p) => p.id === res.locals.userId);
-  });
+  console.debug("Getting channels for user", res.locals.userId);
+  const channels = db.channels.filter((c) =>
+    c.participants.some((p) => p.id === res.locals.userId)
+  );
+  console.debug("All channels:", JSON.stringify(db.channels, null, 2));
+  console.debug("Channels:", channels);
   const r: Protocol.GetChannelsResponse = { channels };
   res.json(r);
 });
 
 app.post("/channels", (req, res) => {
   const { name, creator } = req.body as Protocol.CreateChannelRequest;
+  if (!name) {
+    const e: Protocol.ErrorResponse = {
+      statusCode: 400,
+      message: "Missing required field: name",
+    };
+    return res.status(400).json(e);
+  }
+  if (!creator) {
+    const e: Protocol.ErrorResponse = {
+      statusCode: 400,
+      message: "Missing required field: creator",
+    };
+    return res.status(400).json(e);
+  }
+
   const db: DB = res.locals.db;
   const newChannel: Channel = {
     id: uuid(),

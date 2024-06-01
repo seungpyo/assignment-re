@@ -3,7 +3,7 @@ import { ApiClient } from "./apiClient";
 import { errorOf, Protocol } from "@seungpyo.hong/netpro-hw";
 
 export interface LoginScreenProps {
-  onLoginSuccess: (me: Protocol.LoginResponse) => void;
+  onLoginSuccess: ({ user, token }: Protocol.LoginResponse) => void;
   onSignUpSuccess: () => void;
 }
 
@@ -25,8 +25,8 @@ const LoginScreen = ({ onLoginSuccess, onSignUpSuccess }: LoginScreenProps) => {
             alert(errorOf(res)?.message);
             return;
           }
-          const me = res as Protocol.LoginResponse;
-          onLoginSuccess(me);
+          console.log("Login response", res as Protocol.LoginResponse);
+          onLoginSuccess(res as Protocol.LoginResponse);
         }}
       >
         BACKDOOR

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { ApiClient } from "./apiClient";
 
 interface ChatScreenProps {
-  me: Protocol.LoginResponse;
+  me: User;
   onLogout: () => void;
 }
 
@@ -12,6 +12,7 @@ const ChatScreen = ({ me, onLogout }: ChatScreenProps) => {
   const [showChannelNameInput, setShowChannelNameInput] = useState(false);
   const [newChannelName, setNewChannelName] = useState("");
   useEffect(() => {
+    console.log("Getting channels");
     ApiClient.getChannels().then((response) => {
       if (errorOf(response)) {
         alert(errorOf(response)?.message);
@@ -39,6 +40,7 @@ const ChatScreen = ({ me, onLogout }: ChatScreenProps) => {
               onClick={async () => {
                 const res = await ApiClient.createChannel({
                   name: newChannelName,
+                  creator: me,
                 });
                 if (errorOf(res)) {
                   alert(errorOf(res)?.message);

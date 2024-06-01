@@ -1,11 +1,11 @@
 import { useState } from "react";
 import LoginScreen from "./Login";
 import ChatScreen from "./Chat";
-import { Protocol, User } from "@seungpyo.hong/netpro-hw";
+import { User } from "@seungpyo.hong/netpro-hw";
 import { ApiClient } from "./apiClient";
 
 function App() {
-  const [me, setMe] = useState<Protocol.LoginResponse | null>(null);
+  const [me, setMe] = useState<User | null>(null);
   return (
     <>
       {me ? (
@@ -18,9 +18,10 @@ function App() {
         />
       ) : (
         <LoginScreen
-          onLoginSuccess={(me) => {
-            setMe(me);
-            ApiClient.setToken(me.token);
+          onLoginSuccess={({ user, token }) => {
+            console.log("App: Login success", user, token);
+            ApiClient.setToken(token);
+            setMe(user);
           }}
           onSignUpSuccess={() => alert("Sign up successful")}
         />
