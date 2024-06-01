@@ -1,11 +1,10 @@
 {
   "name": "@seungpyo.hong/netpro-hw",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "main": "dist/index.js",
   "types": "index.d.ts",
   "files": [
-    "*.ts",
-    "*.d.ts"
+    "dist/**/*"
   ],
   "scripts": {
     "build": "tsc"
