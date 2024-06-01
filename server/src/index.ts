@@ -2,6 +2,7 @@ import express from "express";
 import { createServer } from "http";
 import { Server } from "ws";
 import path from "path";
+import { uuid } from "@shared/utils";
 
 const app = express();
 const server = createServer(app);
@@ -22,6 +23,10 @@ wss.on("connection", (ws) => {
 
 app.get("*", (req, res) => {
   res.sendFile(path.resolve(__dirname, "../../client/build", "index.html"));
+});
+
+app.post("/uuid", (req, res) => {
+  res.json({ uuid: uuid() });
 });
 
 const PORT = process.env.PORT || 5000;
