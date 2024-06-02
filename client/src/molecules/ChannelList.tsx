@@ -1,15 +1,26 @@
 import { Channel, errorOf, Protocol, User } from "@seungpyo.hong/netpro-hw";
 import { useEffect, useState } from "react";
-import { ApiClient } from "./apiClient";
+import { ApiClient } from "src/apiClient";
+import { useWebSocket } from "src/context/wsContext";
 
-interface ChatScreenProps {
+interface ChannelListProps {
   me: User;
-  onLogout: () => void;
+  currentChannel: Channel | null;
+  onChannelSelect: (channel: Channel) => void;
 }
 
-const ChatScreen = ({ me, onLogout }: ChatScreenProps) => {
+const ChannelList = ({
+  me,
+  currentChannel,
+  onChannelSelect,
+}: ChannelListProps) => {
+  const { ws } = useWebSocket();
   const [channels, setChannels] = useState<Channel[]>([]);
-  const [currentChannel, setCurrentChannel] = useState<Channel | null>(null);
+  const [showChannelCreateDialog, setShowChannelCreateDialog] = useState(false);
+  const [showChannelJoinDialog, setShowChannelJoinDialog] = useState(false);
+  const [newChannelName, setNewChannelName] = useState("");
+  const [joinChannelId, setJoinChannelId] = useState("");
+
   useEffect(() => {
     ApiClient.getChannels().then((response) => {
       if (errorOf(response)) {
@@ -19,78 +30,7 @@ const ChatScreen = ({ me, onLogout }: ChatScreenProps) => {
       setChannels((response as Protocol.GetChannelsResponse).channels);
     });
   }, []);
-  return (
-    <div>
-      <h1>Chat</h1>
-      <div style={styles.chatScreenBody}>
-        <ChannelList
-          me={me}
-          channels={channels}
-          onChannelCreate={(newChannel) =>
-            setChannels([...channels, newChannel])
-          }
-          currentChannel={currentChannel}
-          onChannelSelect={(channel) => setCurrentChannel(channel)}
-        />
-        <ParticipantsList channel={currentChannel} />
-      </div>
-    </div>
-  );
-};
 
-interface ChannelUserListProps {
-  channel: Channel | null;
-}
-
-const ParticipantsList = ({ channel }: ChannelUserListProps) => {
-  const [participants, setParticipants] = useState<User[]>(
-    channel?.participants ?? []
-  );
-  useEffect(() => {
-    if (!channel) {
-      return;
-    }
-    ApiClient.getParticipants({ channelId: channel.id }).then((response) => {
-      if (errorOf(response)) {
-        alert(errorOf(response)?.message);
-        return;
-      }
-      setParticipants(
-        (response as Protocol.GetParticipantsResponse).participants
-      );
-    });
-  }, [channel]);
-  return (
-    <div style={styles.channelUserList}>
-      <h2>Participants</h2>
-      <ul>
-        {participants.map((participant) => (
-          <li key={participant.id}>{participant.name}</li>
-        ))}
-      </ul>
-    </div>
-  );
-};
-
-interface ChannelListProps {
-  me: User;
-  channels: Channel[];
-  onChannelCreate: (channel: Channel) => void;
-  currentChannel: Channel | null;
-  onChannelSelect: (channel: Channel) => void;
-}
-
-const ChannelList = ({
-  me,
-  channels,
-  onChannelCreate,
-  currentChannel,
-  onChannelSelect,
-}: ChannelListProps) => {
-  const [showChannelCreateDialog, setShowChannelCreateDialog] = useState(false);
-  const [showChannelJoinDialog, setShowChannelJoinDialog] = useState(false);
-  const [newChannelName, setNewChannelName] = useState("");
-  const [joinChannelId, setJoinChannelId] = useState("");
   return (
     <div style={styles.channelList}>
       <h2>Channels</h2>
@@ -115,7 +55,7 @@ const ChannelList = ({
                 return;
               }
               const { newChannel } = res as Protocol.CreateChannelResponse;
-              onChannelCreate(newChannel);
+              setChannels([...channels, newChannel]);
               setShowChannelCreateDialog(false);
             }}
           >
@@ -138,10 +78,23 @@ const ChannelList = ({
               const res = await ApiClient.joinChannel({
                 channelId: joinChannelId,
               });
+              const msg: Protocol.WSMessage = {
+                senderId: me.id,
+                channelId: joinChannelId,
+                type: "join",
+                data: JSON.stringify(me),
+              };
+              ws.send(JSON.stringify(msg));
+              console.log("join channel response", res);
               if (errorOf(res)) {
                 alert(errorOf(res)?.message);
                 return;
               }
+              const { channel } = res as Protocol.JoinChannelResponse;
+              console.log("joined channel", channel);
+              console.log("prev channels", channels);
+              setChannels([...channels, channel]);
+              onChannelSelect(channel);
               setShowChannelJoinDialog(false);
             }}
           >
@@ -169,11 +122,6 @@ const ChannelList = ({
 };
 
 const styles: { [key: string]: React.CSSProperties } = {
-  chatScreenBody: {
-    display: "flex",
-    flexDirection: "row",
-    alignItems: "center",
-  },
   channelList: {
     backgroundColor: "lightgreen",
     borderColor: "green",
@@ -181,4 +129,4 @@ const styles: { [key: string]: React.CSSProperties } = {
   },
 };
 
-export default ChatScreen;
+export default ChannelList;

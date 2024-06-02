@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ApiClient } from "./apiClient";
+import { ApiClient } from "../apiClient";
 import { errorOf, Protocol } from "@seungpyo.hong/netpro-hw";
 
 export interface LoginScreenProps {
@@ -7,42 +7,51 @@ export interface LoginScreenProps {
   onSignUpSuccess: () => void;
 }
 
+const loginAs = async ({
+  name,
+  password,
+  onLoginSuccess,
+}: {
+  name: string;
+  password: string;
+  onLoginSuccess: ({ user, token }: Protocol.LoginResponse) => void;
+}) => {
+  const res = await ApiClient.login({ name, password });
+  if (errorOf(res)) {
+    alert(errorOf(res)?.message);
+    return;
+  }
+  const { user, token } = res as Protocol.LoginResponse;
+  onLoginSuccess({ user, token });
+};
+
 const LoginScreen = ({ onLoginSuccess, onSignUpSuccess }: LoginScreenProps) => {
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [email, setEmail] = useState("");
+
   return (
     <div>
       <h1>Login</h1>
       <h2> Name </h2>
       <button
         onClick={async () => {
-          const res = await ApiClient.login({
+          await loginAs({
             name: "a",
             password: "a",
+            onLoginSuccess,
           });
-          if (errorOf(res)) {
-            alert(errorOf(res)?.message);
-            return;
-          }
-          console.log("Login response", res as Protocol.LoginResponse);
-          onLoginSuccess(res as Protocol.LoginResponse);
         }}
       >
         Login as a
       </button>
       <button
         onClick={async () => {
-          const res = await ApiClient.login({
+          await loginAs({
             name: "b",
             password: "b",
+            onLoginSuccess,
           });
-          if (errorOf(res)) {
-            alert(errorOf(res)?.message);
-            return;
-          }
-          console.log("Login response", res as Protocol.LoginResponse);
-          onLoginSuccess(res as Protocol.LoginResponse);
         }}
       >
         Login as b
@@ -66,13 +75,7 @@ const LoginScreen = ({ onLoginSuccess, onSignUpSuccess }: LoginScreenProps) => {
       />
       <button
         onClick={async () => {
-          const res = await ApiClient.login({ name, password });
-          if (errorOf(res)) {
-            alert(errorOf(res)?.message);
-            return;
-          }
-          const me = res as Protocol.LoginResponse;
-          onLoginSuccess(me);
+          await loginAs({ name, password, onLoginSuccess });
         }}
       >
         Login

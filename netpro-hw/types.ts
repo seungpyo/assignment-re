@@ -96,7 +96,7 @@ export namespace Protocol {
     newChannel: Channel;
   }
   export interface JoinChannelResponse {
-    success: boolean;
+    channel: Channel;
   }
 
   export interface GetParticipantsRequest {
@@ -107,10 +107,11 @@ export namespace Protocol {
     participants: User[];
   }
 
+  export type WSMessageType = "join" | "leave" | "text" | "voice" | "video";
   export interface WSMessage {
     senderId: string;
-    roomId: string;
-    type: "join" | "leave" | "text" | "voice" | "video";
+    channelId: string;
+    type: WSMessageType;
     data: string;
   }
 }

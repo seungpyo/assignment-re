@@ -14,13 +14,12 @@ import {
 const app = express();
 const server = createServer(app);
 const wss = new Server({ server });
-const websocketOfChannel: { [userId: string]: WebSocket[] } = {};
+const websockets: WebSocket[] = [];
 
 app.use(express.static(path.resolve(__dirname, "../../client/build")));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use((req, res, next) => {
-  console.debug("Middleware, path:", req.path, "method:", req.method);
   res.locals.db = (readDB() ?? {
     users: [],
     channels: [],
@@ -57,12 +56,6 @@ app.use((req, res, next) => {
 
 wss.on("connection", (ws, req) => {
   const urlSearchParams = new URLSearchParams(req.url?.split("?")[1]);
-  const channelId = urlSearchParams.get("channelId");
-  if (!channelId) {
-    console.error("No userId in query params");
-    ws.close();
-    return;
-  }
   const wsTokenId = urlSearchParams.get("wsTokenId");
   if (!wsTokenId) {
     console.error("No wsToken in query params");
@@ -77,8 +70,8 @@ wss.on("connection", (ws, req) => {
   };
   const wsToken = db.tokens.find((t) => t.id === wsTokenId);
   if (!wsToken) {
-    console.error("No wsToken found");
-    ws.close(4002, "Token not found");
+    console.error("No matching wsToken found");
+    ws.close(4002, "No matching wsToken found");
     return;
   }
   if (new Date(wsToken.expiresAt) < new Date()) {
@@ -86,25 +79,19 @@ wss.on("connection", (ws, req) => {
     ws.close(4002, "Expired");
     return;
   }
-  const channel = db.channels.find((c) => c.id === channelId);
-  if (!channel) {
-    console.error("Channel not found");
-    ws.close(4003, "Channel not found");
-    return;
-  }
-  if (!channel.participants.some((p) => p.id === wsToken.userId)) {
-    console.error("User not in channel");
-    ws.close(4004, "User not in channel");
-    return;
-  }
-  if (!websocketOfChannel[channel.id]) {
-    websocketOfChannel[channel.id] = [];
-  }
-  websocketOfChannel[channel.id].push(ws);
+  websockets.push(ws);
 
   ws.on("message", (data) => {
+    console.debug("WS message:", data.toString());
     const wsMessage: Protocol.WSMessage = JSON.parse(data.toString());
-    const others = websocketOfChannel[channel.id].filter((w) => w !== ws);
+    console.debug("Parsed WS message:", wsMessage);
+    const others = websockets.filter((w) => w !== ws && w.readyState === 1);
+    console.debug(
+      "Sending to",
+      others.length,
+      "other clients, out of",
+      websockets.length
+    );
     others.forEach((dst) => {
       dst.send(JSON.stringify(wsMessage));
     });
@@ -185,13 +172,7 @@ app.post("/signup", (req, res) => {
 
 app.get("/channels", (req, res) => {
   const db: DB = res.locals.db;
-  console.debug("Getting channels for user", res.locals.userId);
-  const channels = db.channels.filter((c) =>
-    c.participants.some((p) => p.id === res.locals.userId)
-  );
-  console.debug("All channels:", JSON.stringify(db.channels, null, 2));
-  console.debug("Channels:", channels);
-  const r: Protocol.GetChannelsResponse = { channels };
+  const r: Protocol.GetChannelsResponse = { channels: db.channels };
   res.json(r);
 });
 
@@ -310,7 +291,7 @@ app.post("/channels/:channelId/join", (req, res) => {
   }
   channel.participants.push(user);
   writeDB(db);
-  res.json({ sucess: true });
+  res.json({ channel });
 });
 
 app.get("/", (req, res) => {

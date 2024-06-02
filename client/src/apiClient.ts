@@ -1,3 +1,4 @@
+import { errorOf } from "@seungpyo.hong/netpro-hw";
 import { Channel, Protocol } from "@seungpyo.hong/netpro-hw/dist/types";
 import { channel } from "diagnostics_channel";
 let token: string | null = null;
