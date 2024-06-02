@@ -99,22 +99,56 @@ const ChatScreen = ({ me, onLogout }: ChatScreenProps) => {
       }}
     >
       <div style={styles.chatScreenBody}>
-        <ChannelList
-          me={me}
-          currentChannel={currentChannel}
-          onChannelSelect={async (channel) => {
-            const { messages } = await ApiClient.getMessages({
-              channelId: channel.id,
-            });
-            setCurrentChannel({ ...channel, messages });
+        <div
+          style={{
+            width: 320,
+            height: "100%",
+            display: "flex",
+            flexDirection: "column",
+            alignContent: "flex-start",
+            alignItems: "flex-start",
+            backgroundColor: "#484848",
           }}
-        />
+        >
+          <h1 style={{ color: "white" }}>Your name: {me.name}</h1>
+          <button
+            style={{
+              padding: 8,
+              borderRadius: 8,
+              margin: 8,
+            }}
+            onClick={onLogout}
+          >
+            Logout
+          </button>
+          <ChannelList
+            me={me}
+            currentChannel={currentChannel}
+            onChannelSelect={async (channel) => {
+              const { messages } = await ApiClient.getMessages({
+                channelId: channel.id,
+              });
+              setCurrentChannel({ ...channel, messages });
+            }}
+          />
+        </div>
         <div
           style={{
             width: "100%",
             // height: "100%",
           }}
         >
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "row",
+              justifyContent: "space-between",
+              padding: 8,
+            }}
+          >
+            <button>Voice</button>
+            <button>Video</button>
+          </div>
           <div
             style={{
               height: "calc(100vh - 80px)",
