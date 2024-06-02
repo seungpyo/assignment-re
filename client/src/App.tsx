@@ -8,9 +8,10 @@ import { useWebSocket } from "./context/wsContext";
 function App() {
   const [me, setMe] = useState<User | null>(null);
   const { wsConnect } = useWebSocket();
+  const debug = false;
   return (
     <>
-      {me ? (
+      {debug || me ? (
         <ChatScreen
           me={me}
           onLogout={() => {
@@ -21,7 +22,6 @@ function App() {
       ) : (
         <LoginScreen
           onLoginSuccess={({ user, token }) => {
-            console.log("App: Login success", user, token);
             ApiClient.setToken(token);
             wsConnect({ wsToken: token });
             setMe(user);

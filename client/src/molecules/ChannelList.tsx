@@ -33,7 +33,7 @@ const ChannelList = ({
 
   return (
     <div style={styles.channelList}>
-      <h2>Channels</h2>
+      <h2 style={{ color: "white" }}>Channels</h2>
       <button onClick={() => setShowChannelCreateDialog(true)}>
         Create Channel
       </button>
@@ -99,30 +99,31 @@ const ChannelList = ({
           </button>
         </div>
       ) : null}
-      <ul>
-        {channels.map((channel) => (
-          <li
-            key={channel.id}
-            style={{
-              borderColor: currentChannel === channel ? "blue" : "black",
-              borderWidth: 1,
-            }}
-            onClick={() => onChannelSelect(channel)}
-          >
-            <h3>{channel.name}</h3>
-            <h6>{channel.id}</h6>
-          </li>
-        ))}
-      </ul>
+      {channels.map((channel) => (
+        <div
+          key={channel.id}
+          style={{
+            borderColor: currentChannel === channel ? "blue" : "black",
+            borderWidth: 1,
+          }}
+          onClick={() => onChannelSelect(channel)}
+        >
+          <h3>{channel.name}</h3>
+          <h6>{channel.id}</h6>
+        </div>
+      ))}
     </div>
   );
 };
 
 const styles: { [key: string]: React.CSSProperties } = {
   channelList: {
-    backgroundColor: "lightgreen",
-    borderColor: "green",
-    borderWidth: 1,
+    backgroundColor: "#484848",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    width: 320,
+    height: "100%",
   },
 };
 

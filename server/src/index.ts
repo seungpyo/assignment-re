@@ -12,7 +12,6 @@ import {
   Message,
   User,
 } from "@seungpyo.hong/netpro-hw";
-import { couldStartTrivia } from "typescript";
 
 interface WSInfo {
   ws: WebSocket;
@@ -186,7 +185,10 @@ app.post("/signup", (req, res) => {
 
 app.get("/channels", (req, res) => {
   const db: DB = res.locals.db;
-  const r: Protocol.GetChannelsResponse = { channels: db.channels };
+  const channels = db.channels.filter((c) =>
+    c.participants.some((p) => p.id === res.locals.userId)
+  );
+  const r: Protocol.GetChannelsResponse = { channels };
   res.json(r);
 });
 
@@ -367,10 +369,12 @@ app.post("/channels/:channelId/messages", (req, res) => {
   writeDB(db);
   const r: Protocol.SendMessageResponse = { message };
   res.json(r);
-  const webSocketsToSendTo =
-    wsInfos.filter((w) => w.channelId === channelId).map((w) => w.ws) ?? [];
-  webSocketsToSendTo.forEach((ws) => {
-    ws.send(
+  console.log("Sending message to ", wsInfos.length, " clients");
+  console.log("Message: ", message);
+  console.log("wsinfo sample: ", wsInfos[0]);
+
+  wsInfos.forEach((wsInfo) => {
+    wsInfo.ws.send(
       JSON.stringify({
         senderId: sender.id,
         channelId,

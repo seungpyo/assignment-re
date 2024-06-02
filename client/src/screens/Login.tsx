@@ -31,73 +31,100 @@ const LoginScreen = ({ onLoginSuccess, onSignUpSuccess }: LoginScreenProps) => {
   const [email, setEmail] = useState("");
 
   return (
-    <div>
-      <h1>Login</h1>
-      <h2> Name </h2>
-      <button
-        onClick={async () => {
-          await loginAs({
-            name: "a",
-            password: "a",
-            onLoginSuccess,
-          });
+    <div
+      style={{
+        alignItems: "center",
+        backgroundColor: "black",
+        display: "flex",
+        justifyContent: "center",
+        height: "100vh",
+        width: "100vw",
+      }}
+    >
+      <div
+        style={{
+          alignContent: "center",
+          backgroundColor: "#282828",
+          borderRadius: 8,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
+          width: "30%",
+          height: "50%",
+          padding: 24,
+          gap: 16,
         }}
       >
-        Login as a
-      </button>
-      <button
-        onClick={async () => {
-          await loginAs({
-            name: "b",
-            password: "b",
-            onLoginSuccess,
-          });
-        }}
-      >
-        Login as b
-      </button>
-      <input
-        type="text"
-        placeholder="Name"
-        onChange={(e) => setName(e.target.value)}
-      />
-      <h2> Password </h2>
-      <input
-        type="password"
-        placeholder="Password"
-        onChange={(e) => setPassword(e.target.value)}
-      />
-      <h2> Email (Only required on sign up)</h2>
-      <input
-        type="email"
-        placeholder="Email"
-        onChange={(e) => setEmail(e.target.value)}
-      />
-      <button
-        onClick={async () => {
-          await loginAs({ name, password, onLoginSuccess });
-        }}
-      >
-        Login
-      </button>
-      <button
-        onClick={async () => {
-          const response = await ApiClient.signUp({
-            name,
-            email,
-            password,
-          });
-          if (errorOf(response)) {
-            alert(errorOf(response)?.message);
-            return;
-          }
-          alert("Sign up successful");
-        }}
-      >
-        Sign Up
-      </button>
+        <h1 style={{ textAlign: "center", color: "white" }}>NetPro-HW</h1>
+        <input
+          style={styles.input}
+          type="text"
+          placeholder="Name"
+          onChange={(e) => setName(e.target.value)}
+        />
+        <input
+          style={styles.input}
+          type="password"
+          placeholder="Password"
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        <input
+          style={styles.input}
+          type="email"
+          placeholder="Email (Only for Sign Up)"
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <button
+          style={styles.button}
+          onClick={async () => {
+            await loginAs({ name, password, onLoginSuccess });
+          }}
+        >
+          Login
+        </button>
+        <button
+          style={styles.button}
+          onClick={async () => {
+            const response = await ApiClient.signUp({
+              name,
+              email,
+              password,
+            });
+            if (errorOf(response)) {
+              alert(errorOf(response)?.message);
+              return;
+            }
+            alert("Sign up successful");
+          }}
+        >
+          Sign Up
+        </button>
+      </div>
     </div>
   );
+};
+
+const styles: { [key: string]: React.CSSProperties } = {
+  input: {
+    borderRadius: 8,
+    borderWidth: 0,
+    boxShadow: "none",
+    height: 24,
+    fontSize: 16,
+    outline: "none",
+    padding: 8,
+  },
+  button: {
+    backgroundColor: "black",
+    color: "white",
+    borderRadius: 8,
+    borderWidth: 0,
+    boxShadow: "none",
+    height: 24,
+    fontSize: 16,
+    outline: "none",
+    textAlign: "center",
+  },
 };
 
 export default LoginScreen;

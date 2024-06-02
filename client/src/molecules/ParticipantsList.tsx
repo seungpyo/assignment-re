@@ -26,21 +26,22 @@ const ParticipantsList = ({ channel }: ChannelUserListProps) => {
   }, [channel]);
   return (
     <div style={styles.channelUserList}>
-      <h2>Participants</h2>
-      <ul>
-        {participants.map((participant) => (
-          <li key={participant.id}>{participant.name}</li>
-        ))}
-      </ul>
+      <h2 style={{ color: "white" }}>Participants</h2>
+      {participants.map((participant) => (
+        <h4 key={participant.id}>{participant.name}</h4>
+      ))}
     </div>
   );
 };
 
 const styles: { [key: string]: React.CSSProperties } = {
   channelUserList: {
+    backgroundColor: "#484848",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
+    width: 320,
+    height: "100%",
   },
 };
 
