@@ -1,7 +1,6 @@
 import { User, errorOf, Protocol, Channel } from "@seungpyo.hong/netpro-hw";
 import { useState, useEffect } from "react";
 import { ApiClient } from "src/apiClient";
-import { useWebSocket } from "src/context/wsContext";
 
 interface ChannelUserListProps {
   channel: Channel | null;

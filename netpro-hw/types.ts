@@ -18,6 +18,7 @@ export interface Channel {
 }
 
 export interface Message {
+  id: string;
   sender: User;
   content: string;
   createdAt: string;
@@ -79,7 +80,7 @@ export namespace Protocol {
   }
 
   export interface SendMessageResponse {
-    success: boolean;
+    message: Message;
   }
 
   export interface ErrorResponse {

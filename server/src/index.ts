@@ -9,12 +9,21 @@ import {
   Protocol,
   AuthToken,
   Channel,
+  Message,
+  User,
 } from "@seungpyo.hong/netpro-hw";
+import { couldStartTrivia } from "typescript";
+
+interface WSInfo {
+  ws: WebSocket;
+  wsTokenId: string;
+  channelId: string | null;
+}
 
 const app = express();
 const server = createServer(app);
 const wss = new Server({ server });
-const websockets: WebSocket[] = [];
+const wsInfos: WSInfo[] = [];
 
 app.use(express.static(path.resolve(__dirname, "../../client/build")));
 app.use(express.json());
@@ -79,21 +88,32 @@ wss.on("connection", (ws, req) => {
     ws.close(4002, "Expired");
     return;
   }
-  websockets.push(ws);
+  wsInfos.push({
+    ws,
+    wsTokenId,
+    channelId: null,
+  });
 
   ws.on("message", (data) => {
-    console.debug("WS message:", data.toString());
     const wsMessage: Protocol.WSMessage = JSON.parse(data.toString());
-    console.debug("Parsed WS message:", wsMessage);
-    const others = websockets.filter((w) => w !== ws && w.readyState === 1);
-    console.debug(
-      "Sending to",
-      others.length,
-      "other clients, out of",
-      websockets.length
-    );
+    if (wsMessage.type === "join") {
+      const wsInfo = wsInfos.find((w) => w.ws === ws);
+      if (!wsInfo) {
+        console.error("No wsInfo found for ws");
+        return;
+      }
+      wsInfo.channelId = wsMessage.channelId;
+    } else if (wsMessage.type === "leave") {
+      const wsInfo = wsInfos.find((w) => w.ws === ws);
+      if (!wsInfo) {
+        console.error("No wsInfo found for ws");
+        return;
+      }
+      wsInfo.channelId = null;
+    }
+    const others = wsInfos.filter((w) => w.ws !== ws && w.ws.readyState === 1);
     others.forEach((dst) => {
-      dst.send(JSON.stringify(wsMessage));
+      dst.ws.send(JSON.stringify(wsMessage));
     });
   });
 });
@@ -105,8 +125,6 @@ app.post("/login", (req, res) => {
     (user) => user.name === name && user.password === password
   );
   if (!match) {
-    console.debug("Login failed:", name, password);
-    console.debug("Users:", db.users);
     const e: Protocol.ErrorResponse = {
       statusCode: 401,
       message: "Invalid credentials",
@@ -128,7 +146,6 @@ app.post("/login", (req, res) => {
     },
     token: token.id,
   };
-  console.debug("Login success:", r);
   res.json(r);
 });
 
@@ -148,7 +165,6 @@ app.post("/logout", (req, res) => {
 
 app.post("/signup", (req, res) => {
   const { name, email, password } = req.body as Protocol.SignUpRequest;
-  console.debug("Signup request:", req.body);
   if (!name || !email || !password) {
     return res.status(400).json({ error: "Missing required fields" });
   }
@@ -161,8 +177,6 @@ app.post("/signup", (req, res) => {
     };
     return res.status(409).json(e);
   }
-  console.debug(`users: ${db.users}`);
-  console.debug(`Got name: ${name}, email: ${email}, password: ${password}`);
   const user = { id: uuid(), name, email, password };
   db.users.push(user);
   writeDB(db);
@@ -294,6 +308,79 @@ app.post("/channels/:channelId/join", (req, res) => {
   res.json({ channel });
 });
 
+app.get("/channels/:channelId/messages", (req, res) => {
+  const { channelId } = req.params;
+  const db: DB = res.locals.db;
+  const channel = db.channels.find((c) => c.id === channelId);
+  if (!channel) {
+    const e: Protocol.ErrorResponse = {
+      statusCode: 404,
+      message: "Channel not found",
+    };
+    return res.status(404).json(e);
+  }
+  if (!channel.participants.some((p) => p.id === res.locals.userId)) {
+    const e: Protocol.ErrorResponse = {
+      statusCode: 403,
+      message: "Forbidden",
+    };
+    return res.status(403).json(e);
+  }
+  const r: Protocol.GetMessagesResponse = { messages: channel.messages };
+  res.json(r);
+});
+
+app.post("/channels/:channelId/messages", (req, res) => {
+  const { channelId } = req.params;
+  const { content } = req.body as Protocol.SendMessageRequest;
+  const db: DB = res.locals.db;
+  const channel = db.channels.find((c) => c.id === channelId);
+  if (!channel) {
+    const e: Protocol.ErrorResponse = {
+      statusCode: 404,
+      message: "Channel not found",
+    };
+    return res.status(404).json(e);
+  }
+  if (!channel.participants.some((p) => p.id === res.locals.userId)) {
+    const e: Protocol.ErrorResponse = {
+      statusCode: 403,
+      message: "Forbidden",
+    };
+    return res.status(403).json(e);
+  }
+  const sender = db.users.find((u) => u.id === res.locals.userId);
+  if (!sender) {
+    const e: Protocol.ErrorResponse = {
+      statusCode: 404,
+      message: "User not found",
+    };
+    return res.status(404).json(e);
+  }
+  const message: Message = {
+    id: uuid(),
+    sender,
+    content,
+    createdAt: new Date().toISOString(),
+  };
+  channel.messages.push(message);
+  writeDB(db);
+  const r: Protocol.SendMessageResponse = { message };
+  res.json(r);
+  const webSocketsToSendTo =
+    wsInfos.filter((w) => w.channelId === channelId).map((w) => w.ws) ?? [];
+  webSocketsToSendTo.forEach((ws) => {
+    ws.send(
+      JSON.stringify({
+        senderId: sender.id,
+        channelId,
+        type: "text",
+        data: JSON.stringify(message),
+      })
+    );
+  });
+});
+
 app.get("/", (req, res) => {
   res.sendFile(path.resolve(__dirname, "../../client/build", "index.html"));
 });
@@ -306,4 +393,6 @@ app.get("*", (req, res) => {
   res.status(404).send(e);
 });
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, () =>
+  console.log(`Server running on port ${PORT}, URL: http://localhost:${PORT}`)
+);

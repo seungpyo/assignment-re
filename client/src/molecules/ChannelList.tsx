@@ -85,14 +85,11 @@ const ChannelList = ({
                 data: JSON.stringify(me),
               };
               ws.send(JSON.stringify(msg));
-              console.log("join channel response", res);
               if (errorOf(res)) {
                 alert(errorOf(res)?.message);
                 return;
               }
               const { channel } = res as Protocol.JoinChannelResponse;
-              console.log("joined channel", channel);
-              console.log("prev channels", channels);
               setChannels([...channels, channel]);
               onChannelSelect(channel);
               setShowChannelJoinDialog(false);

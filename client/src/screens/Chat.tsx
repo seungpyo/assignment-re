@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import ParticipantsList from "../molecules/ParticipantsList";
 import ChannelList from "../molecules/ChannelList";
 import { useWebSocket } from "src/context/wsContext";
+import MessageList from "src/molecules/MessageList";
+import { ApiClient } from "src/apiClient";
 
 interface ChatScreenProps {
   me: User;
@@ -11,11 +13,12 @@ interface ChatScreenProps {
 
 const ChatScreen = ({ me, onLogout }: ChatScreenProps) => {
   const [currentChannel, setCurrentChannel] = useState<Channel | null>(null);
+  const [inputMessage, setInputMessage] = useState("");
+  const [isSending, setIsSending] = useState(false);
   const { registerWSCallback } = useWebSocket();
   useEffect(() => {
     registerWSCallback("join", (message) => {
       const joinedUser: User = JSON.parse(message.data);
-      console.log("user join message", joinedUser);
       setCurrentChannel((prev) => {
         if (!prev) {
           return null;
@@ -68,8 +71,52 @@ const ChatScreen = ({ me, onLogout }: ChatScreenProps) => {
         <ChannelList
           me={me}
           currentChannel={currentChannel}
-          onChannelSelect={(channel) => setCurrentChannel(channel)}
+          onChannelSelect={async (channel) => {
+            const { messages } = await ApiClient.getMessages({
+              channelId: channel.id,
+            });
+            setCurrentChannel({ ...channel, messages });
+          }}
         />
+        {currentChannel ? (
+          <div>
+            <MessageList messages={currentChannel.messages ?? []} />
+            <input
+              type="text"
+              placeholder="Message"
+              onChange={(e) => setInputMessage(e.target.value)}
+            />
+            <button
+              onClick={async () => {
+                if (isSending) {
+                  return;
+                }
+                setIsSending(true);
+                const { message } = await ApiClient.sendMessage({
+                  channelId: currentChannel.id,
+                  content: inputMessage,
+                });
+                setIsSending(false);
+                setInputMessage("");
+                setCurrentChannel((prev) => {
+                  if (!prev) {
+                    return null;
+                  }
+                  const messages = prev.messages ?? [];
+                  return {
+                    ...prev,
+                    messages: [
+                      ...messages.filter((m) => m.id !== message.id),
+                      message,
+                    ].sort((a, b) => a.createdAt.localeCompare(b.createdAt)),
+                  };
+                });
+              }}
+            >
+              {isSending ? "Sending..." : "Send"}
+            </button>
+          </div>
+        ) : null}
         <ParticipantsList channel={currentChannel} />
       </div>
     </div>

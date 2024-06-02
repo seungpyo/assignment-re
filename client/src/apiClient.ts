@@ -119,4 +119,31 @@ export namespace ApiClient {
     );
     return response.json();
   };
+
+  export const getMessages = async ({
+    channelId,
+  }: Protocol.GetMessagesRequest) => {
+    const response = await fetch(`${apiUrl}/channels/${channelId}/messages`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return response.json() as Promise<Protocol.GetMessagesResponse>;
+  };
+
+  export const sendMessage = async ({
+    channelId,
+    content,
+  }: Protocol.SendMessageRequest) => {
+    const response = await fetch(`${apiUrl}/channels/${channelId}/messages`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ channelId, content }),
+    });
+    return response.json() as Promise<Protocol.SendMessageResponse>;
+  };
 }

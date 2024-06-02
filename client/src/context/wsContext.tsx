@@ -37,17 +37,11 @@ export const WebSocketProvider = ({ children }) => {
     ws.onmessage = (event) => {
       const message = JSON.parse(event.data) as Protocol.WSMessage;
       console.log("WebSocketProvider: received message", message);
-      console.log(
-        "Callback for message type",
-        message.type,
-        callbacks[message.type]
-      );
       callbacks[message.type]?.(message);
     };
   }, [ws, callbacks]);
   const registerWSCallback = useCallback(
     (type: string, callback: (message: Protocol.WSMessage) => void) => {
-      console.log("WebSocketProvider: registerWSCallback", type);
       setCallbacks((prev) => ({ ...prev, [type]: callback }));
     },
     []
