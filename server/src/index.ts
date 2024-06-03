@@ -10,7 +10,7 @@ import {
   AuthToken,
   Channel,
   Message,
-  User,
+  User
 } from "@seungpyo.hong/netpro-hw";
 
 interface WSInfo {
@@ -95,27 +95,84 @@ wss.on("connection", (ws, req) => {
 
   ws.on("message", (data) => {
     const wsMessage: Protocol.WSMessage = JSON.parse(data.toString());
-    if (wsMessage.type === "join") {
-      const wsInfo = wsInfos.find((w) => w.ws === ws);
-      if (!wsInfo) {
-        console.error("No wsInfo found for ws");
-        return;
-      }
-      wsInfo.channelId = wsMessage.channelId;
-    } else if (wsMessage.type === "leave") {
-      const wsInfo = wsInfos.find((w) => w.ws === ws);
-      if (!wsInfo) {
-        console.error("No wsInfo found for ws");
-        return;
-      }
-      wsInfo.channelId = null;
-    }
-    const others = wsInfos.filter((w) => w.ws !== ws && w.ws.readyState === 1);
-    others.forEach((dst) => {
-      dst.ws.send(JSON.stringify(wsMessage));
-    });
+    console.log("Received WebSocket message:", wsMessage);
+    handleMessage(wsMessage, ws);
+  });
+
+  ws.on("close", () => {
+    handleUserDisconnect(ws);
   });
 });
+
+function handleMessage(message: Protocol.WSMessage, ws: WebSocket) {
+  console.log("Handling message of type:", message.type);
+  switch (message.type) {
+    case 'join':
+      handleJoin(message, ws);
+      break;
+    case 'leave':
+      handleLeave(message, ws);
+      break;
+    case 'text':
+    case 'voice':
+    case 'video':
+    case 'video-offer':
+    case 'video-answer':
+    case 'new-ice-candidate':
+      forwardMessage(message);
+      break;
+  }
+}
+
+function handleJoin(message: Protocol.WSMessage, ws: WebSocket) {
+  const wsInfo = wsInfos.find((w) => w.ws === ws);
+  if (!wsInfo) {
+    console.error("No wsInfo found for ws");
+    return;
+  }
+  wsInfo.channelId = message.channelId;
+  console.log(`User ${wsInfo.wsTokenId} joined channel ${message.channelId}`);
+}
+
+function forwardMessage(message: Protocol.WSMessage) {
+  console.log("Forwarding message to target:", message.target);
+  wsInfos.forEach((client) => {
+    console.log(`Checking client ${client.wsTokenId} for target ${message.target} and channel ${client.channelId}`);
+    if (client.channelId === message.target && client.ws.readyState === WebSocket.OPEN) {
+      console.log("Sending message to client:", client.wsTokenId);
+      client.ws.send(JSON.stringify(message));
+    }
+  });
+}
+
+function handleLeave(message: Protocol.WSMessage, ws: WebSocket) {
+  const wsInfo = wsInfos.find((w) => w.ws === ws);
+  if (!wsInfo) {
+    console.error("No wsInfo found for ws");
+    return;
+  }
+  wsInfo.channelId = null;
+  console.log(`User ${wsInfo.wsTokenId} left channel ${message.channelId}`);
+}
+
+function handleUserDisconnect(ws: WebSocket) {
+  const wsIndex = wsInfos.findIndex((w) => w.ws === ws);
+  if (wsIndex !== -1) {
+    const wsInfo = wsInfos[wsIndex];
+    if (wsInfo.channelId) {
+      const leaveMessage: Protocol.WSMessage = {
+        senderId: wsInfo.wsTokenId,
+        channelId: wsInfo.channelId,
+        type: 'leave',
+        data: '',
+        target: wsInfo.channelId
+      };
+      handleMessage(leaveMessage, ws);
+    }
+    console.log(`User disconnected: ${wsInfo.wsTokenId}`);
+    wsInfos.splice(wsIndex, 1);
+  }
+}
 
 app.post("/login", (req, res) => {
   const { name, password } = req.body as Protocol.LoginRequest;
@@ -391,11 +448,12 @@ app.get("/", (req, res) => {
 
 app.get("*", (req, res) => {
   const e: Protocol.ErrorResponse = {
-    statusCode: 404,
-    message: `Not found: ${req.path}`,
+      statusCode: 404,
+      message: `Not found: ${req.path}`,
   };
   res.status(404).send(e);
 });
+
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () =>
   console.log(`Server running on port ${PORT}, URL: http://localhost:${PORT}`)
