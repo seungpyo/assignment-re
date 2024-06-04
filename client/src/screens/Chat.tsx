@@ -383,21 +383,6 @@ const ChatScreen = ({ me, onLogout }: ChatScreenProps) => {
                 });
                 setIsSending(false);
                 setInputMessage("");
-                // Manually trigger the state update to add the new message
-                setCurrentChannel((prevChannel) => {
-                  // if (!prevChannel) return prevChannel;
-                  const newMessages = [...prevChannel.messages, message];
-                  console.log(
-                    "Manually updating messages in the state",
-                    newMessages
-                  );
-                  const newChannel = {
-                    ...prevChannel,
-                    messages: newMessages,
-                  };
-                  console.log("newChannel:", newChannel);
-                  return newChannel;
-                });
               }}
             >
               {isSending ? "Sending..." : "Send"}
