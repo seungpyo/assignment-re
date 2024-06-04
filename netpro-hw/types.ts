@@ -123,7 +123,7 @@ export namespace Protocol {
     type: WSMessageType;
     data: string;
   }
-  export interface Protocol.WSMessageWithTarget extends Protocol.WSMessage {
+  export interface WSMessageWithTarget extends Protocol.WSMessage {
     target?: string;
   }
 }

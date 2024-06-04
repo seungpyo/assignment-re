@@ -136,17 +136,13 @@ function handleJoin(message: Protocol.WSMessage, ws: WebSocket) {
 
 function forwardMessage(message: Protocol.WSMessageWithTarget) {
   console.log("Forwarding message to target:", message.target);
-  wsInfos.forEach((client) => {
-    console.log(
-      `Checking client ${client.wsTokenId} for target ${message.target} and channel ${client.channelId}`
-    );
-    if (
-      client.channelId === message.target &&
-      client.ws.readyState === WebSocket.OPEN
-    ) {
-      console.log("Sending message to client:", client.wsTokenId);
-      client.ws.send(JSON.stringify(message));
-    }
+  const webSocketsToSendTo = wsInfos.filter(
+    (wsInfo) =>
+      // wsInfo.channelId === message.target &&
+      wsInfo.ws.readyState === WebSocket.OPEN
+  );
+  webSocketsToSendTo.forEach((wsInfo) => {
+    wsInfo.ws.send(JSON.stringify(message));
   });
 }
 

@@ -92,6 +92,7 @@ const ChatScreen = ({ me, onLogout }: ChatScreenProps) => {
 
   useEffect(() => {
     if (remoteVideoRef.current && remoteStream) {
+      console.log("Setting remote stream...");
       remoteVideoRef.current.srcObject = remoteStream;
     }
   }, [remoteStream]);
@@ -123,6 +124,7 @@ const ChatScreen = ({ me, onLogout }: ChatScreenProps) => {
     console.log("Tracks added to RTCPeerConnection.");
 
     pc.onicecandidate = (event) => {
+      console.log("pc.onicecandidate: event=", event);
       if (event.candidate) {
         console.log("Sending ICE candidate:", event.candidate);
         if (ws) {
@@ -145,7 +147,7 @@ const ChatScreen = ({ me, onLogout }: ChatScreenProps) => {
       console.log("Received remote track:", event.streams[0]);
       setRemoteStream(event.streams[0]);
     };
-
+    console.log("pc.onicecandidate: pc=", pc);
     setPeerConnection(pc);
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
@@ -168,9 +170,10 @@ const ChatScreen = ({ me, onLogout }: ChatScreenProps) => {
   const handleVideoOffer = async (msg: Protocol.WSMessage) => {
     console.log("Received SDP offer:", msg.data);
     const message = msg as Protocol.WSMessageWithTarget;
-    if (!message.target || message.target !== me.id) return;
+    if (!message.target || message.target !== currentChannel?.id) return;
 
     const pc = new RTCPeerConnection();
+    console.log("handleVideoOffer: pc=", pc);
     setPeerConnection(pc);
 
     const stream = await navigator.mediaDevices.getUserMedia({
@@ -236,11 +239,13 @@ const ChatScreen = ({ me, onLogout }: ChatScreenProps) => {
     await pc.setRemoteDescription(desc);
   };
 
-  const handleNewICECandidate = async (msg: Protocol.WSMessage) => {
+  const handleNewICECandidate = async (msg: Protocol.WSMessageWithTarget) => {
+    if (msg.target !== currentChannel?.id) return;
     console.log("Received new ICE candidate:", msg.data);
     const message = msg as Protocol.WSMessageWithTarget;
-    if (!message.target || message.target !== me.id) return;
-
+    if (!message.target || message.target !== currentChannel?.id) return;
+    console.log("peerConnection:");
+    console.log(peerConnection);
     const pc = peerConnection!;
     const candidate = new RTCIceCandidate(JSON.parse(message.data));
     await pc.addIceCandidate(candidate);
