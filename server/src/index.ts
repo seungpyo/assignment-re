@@ -26,8 +26,9 @@ const sslOptions = {
 };
 
 const app = express();
-const server = createServer(app);
-const wss = new Server({ server });
+// const server = createServer(app);
+// const wss = new Server({ server });
+const wss = new Server({ port: 5001 });
 const wsInfos: WSInfo[] = [];
 
 app.use(express.static(path.resolve(__dirname, "../../client/build")));
@@ -85,6 +86,8 @@ wss.on("connection", (ws, req) => {
   const wsToken = db.tokens.find((t) => t.id === wsTokenId);
   if (!wsToken) {
     console.error("No matching wsToken found");
+    console.error("wsTokenId:", wsTokenId);
+    console.error("db.tokens:", db.tokens);
     ws.close(4002, "No matching wsToken found");
     return;
   }

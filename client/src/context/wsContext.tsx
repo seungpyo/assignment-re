@@ -31,6 +31,7 @@ export const WebSocketProvider = ({ children }) => {
     }
     let newWs: WebSocket;
     try {
+      console.log(`Try to connect to ${webSocketUrl}/?wsTokenId=${wsToken}`);
       newWs = new WebSocket(`${webSocketUrl}/?wsTokenId=${wsToken}`);
       newWs.onopen = () => {
         console.log("WebSocketProvider: connected");
