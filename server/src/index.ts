@@ -441,6 +441,10 @@ app.post("/channels/:channelId/messages", (req, res) => {
   console.log("Message: ", message);
   console.log("wsinfo sample: ", wsInfos[0]);
 
+  console.log(
+    "Open clients: ",
+    wsInfos.filter((wsInfo) => wsInfo.ws.readyState === WebSocket.OPEN).length
+  );
   wsInfos
     .filter((wsInfo) => wsInfo.ws.readyState === WebSocket.OPEN)
     .forEach((wsInfo) => {

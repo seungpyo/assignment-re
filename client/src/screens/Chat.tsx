@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import ParticipantsList from "../molecules/ParticipantsList";
 import ChannelList from "../molecules/ChannelList";
 import { useWebSocket } from "../context/wsContext";
@@ -12,27 +12,6 @@ interface ChatScreenProps {
   onLogout: () => void;
 }
 
-const dummyChannel: Channel = {
-  id: "1",
-  name: "Dummy Channel",
-  participants: [],
-  messages: (() => {
-    const messages = [];
-    for (let i = 0; i < 100; i++) {
-      messages.push({
-        id: i.toString(),
-        sender: {
-          id: i % 2 === 0 ? "1" : "2",
-          name: i % 2 === 0 ? "A" : "B",
-        },
-        content: `Message ${i}`,
-        timestamp: new Date().toISOString(),
-      });
-    }
-    return messages;
-  })(),
-};
-
 const ChatScreen = ({ me, onLogout }: ChatScreenProps) => {
   const [currentChannel, setCurrentChannel] = useState<Channel | null>(null);
   const [inputMessage, setInputMessage] = useState("");
@@ -44,6 +23,182 @@ const ChatScreen = ({ me, onLogout }: ChatScreenProps) => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const { registerWSCallback, ws } = useWebSocket();
+
+  const handleNewMessage = useCallback(
+    (msg: Protocol.WSMessage) => {
+      console.log("Received new message:", msg);
+      const message = msg as Protocol.WSMessageWithTarget;
+      console.log("currentChannel?.id:", currentChannel?.id);
+      console.log("message.channelId:", message.channelId);
+      if (!currentChannel) {
+        console.error("Current channel is null");
+        return;
+      }
+      if (message.channelId === currentChannel?.id) {
+        setCurrentChannel((prevChannel) => {
+          if (!prevChannel) return prevChannel;
+          const newMessages = [
+            ...prevChannel.messages,
+            JSON.parse(message.data),
+          ];
+          console.log("Updating messages in the state", newMessages);
+          const newChannel = {
+            ...prevChannel,
+            messages: newMessages,
+          };
+          console.log("newChannel:", newChannel);
+          return newChannel;
+        });
+      }
+    },
+    [currentChannel]
+  );
+  const handleVideoOffer = useCallback(
+    async (msg: Protocol.WSMessage) => {
+      console.log("Received SDP offer:", msg.data);
+      const message = msg as Protocol.WSMessageWithTarget;
+      if (!message.target || message.target !== currentChannel?.id) return;
+
+      const pc = new RTCPeerConnection();
+      console.log("handleVideoOffer: pc=", pc);
+      setPeerConnection(pc);
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true,
+      });
+      setLocalStream(stream);
+      stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+      console.log("Tracks added to RTCPeerConnection.");
+
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          console.log("Sending ICE candidate:", event.candidate);
+          if (ws) {
+            ws.send(
+              JSON.stringify({
+                senderId: me.id,
+                channelId: message.channelId,
+                type: "new-ice-candidate" as Protocol.WSMessageType,
+                data: JSON.stringify(event.candidate),
+                target: message.senderId,
+              })
+            );
+          } else {
+            console.error("WebSocket is not available for ICE candidate");
+          }
+        }
+      };
+
+      pc.ontrack = (event) => {
+        console.log("Received remote track:", event.streams[0]);
+        setRemoteStream(event.streams[0]);
+      };
+
+      await pc.setRemoteDescription(
+        new RTCSessionDescription(JSON.parse(message.data))
+      );
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+      console.log("Sending SDP answer:", answer);
+      if (ws) {
+        ws.send(
+          JSON.stringify({
+            senderId: me.id,
+            channelId: message.channelId,
+            type: "video-answer" as Protocol.WSMessageType,
+            data: JSON.stringify(answer),
+            target: message.senderId,
+          })
+        );
+      } else {
+        console.error("WebSocket is not available for SDP answer");
+      }
+    },
+    [currentChannel?.id, me.id, ws]
+  );
+
+  const handleVideoAnswer = useCallback(
+    async (msg: Protocol.WSMessage) => {
+      console.log("Received SDP answer:", msg.data);
+      const message = msg as Protocol.WSMessageWithTarget;
+      if (!message.target || message.target !== me.id) return;
+
+      const pc = peerConnection!;
+      const desc = new RTCSessionDescription(JSON.parse(message.data));
+      await pc.setRemoteDescription(desc);
+    },
+    [me.id, peerConnection]
+  );
+
+  const handleNewICECandidate = useCallback(
+    async (msg: Protocol.WSMessageWithTarget) => {
+      if (msg.target !== currentChannel?.id) return;
+      console.log("Received new ICE candidate:", msg.data);
+      const message = msg as Protocol.WSMessageWithTarget;
+      if (!message.target || message.target !== currentChannel?.id) return;
+      console.log("peerConnection:");
+      console.log(peerConnection);
+      const pc = peerConnection!;
+      const candidate = new RTCIceCandidate(JSON.parse(message.data));
+      await pc.addIceCandidate(candidate);
+    },
+    [currentChannel?.id, peerConnection]
+  );
+
+  const disconnectCall = useCallback(() => {
+    console.log("Disconnecting call...");
+    if (peerConnection) {
+      peerConnection.close();
+      setPeerConnection(null);
+
+      if (localStream) {
+        localStream.getTracks().forEach((track) => track.stop());
+        setLocalStream(null);
+      }
+
+      if (remoteStream) {
+        remoteStream.getTracks().forEach((track) => track.stop());
+        setRemoteStream(null);
+      }
+
+      if (ws) {
+        ws.send(
+          JSON.stringify({
+            senderId: me.id,
+            channelId: currentChannel?.id || "",
+            type: "leave" as Protocol.WSMessageType,
+            data: "",
+            target: currentChannel?.id || "",
+          })
+        );
+      } else {
+        console.error("WebSocket is not available for sending leave message");
+      }
+    }
+  }, [
+    currentChannel?.id,
+    me.id,
+    peerConnection,
+    remoteStream,
+    localStream,
+    ws,
+  ]);
+
+  const handleLeave = useCallback(
+    (msg: Protocol.WSMessage) => {
+      console.log("Received leave message:", msg.data);
+      const message = msg as Protocol.WSMessageWithTarget;
+      if (!message.target || message.target !== me.id) return;
+
+      disconnectCall();
+    },
+    [disconnectCall, me.id]
+  );
+
+  useEffect(() => {
+    console.log("watchdog->currentChannel:", currentChannel);
+  }, [currentChannel]);
 
   useEffect(() => {
     if (!ws) {
@@ -80,10 +235,18 @@ const ChatScreen = ({ me, onLogout }: ChatScreenProps) => {
     );
     registerWSCallback("leave" as Protocol.WSMessageType, handleLeave as any);
     registerWSCallback(
-      "new-message" as Protocol.WSMessageType,
+      "text" as Protocol.WSMessageType,
       handleNewMessage as any
     );
-  }, [ws]);
+  }, [
+    handleLeave,
+    handleNewICECandidate,
+    handleNewMessage,
+    handleVideoAnswer,
+    handleVideoOffer,
+    registerWSCallback,
+    ws,
+  ]);
 
   useEffect(() => {
     if (localVideoRef.current && localStream) {
@@ -97,22 +260,6 @@ const ChatScreen = ({ me, onLogout }: ChatScreenProps) => {
       remoteVideoRef.current.srcObject = remoteStream;
     }
   }, [remoteStream]);
-
-  const handleNewMessage = (msg: Protocol.WSMessage) => {
-    console.log("Received new message:", msg);
-    const message = msg as Protocol.WSMessageWithTarget;
-    if (message.channelId === currentChannel?.id) {
-      setCurrentChannel((prevChannel) => {
-        if (!prevChannel) return prevChannel;
-        const newMessages = [...prevChannel.messages, JSON.parse(message.data)];
-        console.log("Updating messages in the state", newMessages);
-        return {
-          ...prevChannel,
-          messages: newMessages,
-        };
-      });
-    }
-  };
 
   const startVideoCall = async () => {
     console.log("Starting video call...");
@@ -169,142 +316,21 @@ const ChatScreen = ({ me, onLogout }: ChatScreenProps) => {
     }
   };
 
-  const handleVideoOffer = async (msg: Protocol.WSMessage) => {
-    console.log("Received SDP offer:", msg.data);
-    const message = msg as Protocol.WSMessageWithTarget;
-    if (!message.target || message.target !== currentChannel?.id) return;
-
-    const pc = new RTCPeerConnection();
-    console.log("handleVideoOffer: pc=", pc);
-    setPeerConnection(pc);
-
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: true,
-      audio: true,
-    });
-    setLocalStream(stream);
-    stream.getTracks().forEach((track) => pc.addTrack(track, stream));
-    console.log("Tracks added to RTCPeerConnection.");
-
-    pc.onicecandidate = (event) => {
-      if (event.candidate) {
-        console.log("Sending ICE candidate:", event.candidate);
-        if (ws) {
-          ws.send(
-            JSON.stringify({
-              senderId: me.id,
-              channelId: message.channelId,
-              type: "new-ice-candidate" as Protocol.WSMessageType,
-              data: JSON.stringify(event.candidate),
-              target: message.senderId,
-            })
-          );
-        } else {
-          console.error("WebSocket is not available for ICE candidate");
-        }
-      }
-    };
-
-    pc.ontrack = (event) => {
-      console.log("Received remote track:", event.streams[0]);
-      setRemoteStream(event.streams[0]);
-    };
-
-    await pc.setRemoteDescription(
-      new RTCSessionDescription(JSON.parse(message.data))
-    );
-    const answer = await pc.createAnswer();
-    await pc.setLocalDescription(answer);
-    console.log("Sending SDP answer:", answer);
-    if (ws) {
-      ws.send(
-        JSON.stringify({
-          senderId: me.id,
-          channelId: message.channelId,
-          type: "video-answer" as Protocol.WSMessageType,
-          data: JSON.stringify(answer),
-          target: message.senderId,
-        })
-      );
-    } else {
-      console.error("WebSocket is not available for SDP answer");
-    }
-  };
-
-  const handleVideoAnswer = async (msg: Protocol.WSMessage) => {
-    console.log("Received SDP answer:", msg.data);
-    const message = msg as Protocol.WSMessageWithTarget;
-    if (!message.target || message.target !== me.id) return;
-
-    const pc = peerConnection!;
-    const desc = new RTCSessionDescription(JSON.parse(message.data));
-    await pc.setRemoteDescription(desc);
-  };
-
-  const handleNewICECandidate = async (msg: Protocol.WSMessageWithTarget) => {
-    if (msg.target !== currentChannel?.id) return;
-    console.log("Received new ICE candidate:", msg.data);
-    const message = msg as Protocol.WSMessageWithTarget;
-    if (!message.target || message.target !== currentChannel?.id) return;
-    console.log("peerConnection:");
-    console.log(peerConnection);
-    const pc = peerConnection!;
-    const candidate = new RTCIceCandidate(JSON.parse(message.data));
-    await pc.addIceCandidate(candidate);
-  };
-
-  const disconnectCall = () => {
-    console.log("Disconnecting call...");
-    if (peerConnection) {
-      peerConnection.close();
-      setPeerConnection(null);
-
-      if (localStream) {
-        localStream.getTracks().forEach((track) => track.stop());
-        setLocalStream(null);
-      }
-
-      if (remoteStream) {
-        remoteStream.getTracks().forEach((track) => track.stop());
-        setRemoteStream(null);
-      }
-
-      if (ws) {
-        ws.send(
-          JSON.stringify({
-            senderId: me.id,
-            channelId: currentChannel?.id || "",
-            type: "leave" as Protocol.WSMessageType,
-            data: "",
-            target: currentChannel?.id || "",
-          })
-        );
-      } else {
-        console.error("WebSocket is not available for sending leave message");
-      }
-    }
-  };
-
-  const handleLeave = (msg: Protocol.WSMessage) => {
-    console.log("Received leave message:", msg.data);
-    const message = msg as Protocol.WSMessageWithTarget;
-    if (!message.target || message.target !== me.id) return;
-
-    disconnectCall();
-  };
-
-  useEffect(() => {
-    if (!currentChannel) {
-      setCurrentChannel(dummyChannel);
-    }
-  }, [currentChannel]);
+  // useEffect(() => {
+  //   if (!currentChannel) {
+  //     setCurrentChannel(dummyChannel);
+  //   }
+  // }, [currentChannel]);
 
   return (
     <div style={{ display: "flex", height: "100vh" }}>
       <ChannelList
         me={me}
         currentChannel={currentChannel}
-        onChannelSelect={setCurrentChannel}
+        onChannelSelect={(c) => {
+          console.log("Channel selected in ChannelListItem", c);
+          setCurrentChannel(c);
+        }}
       />
       <div style={styles.chatScreenBody}>
         <div style={{ flex: 1 }}>
@@ -322,7 +348,11 @@ const ChatScreen = ({ me, onLogout }: ChatScreenProps) => {
             <button onClick={disconnectCall}>Disconnect</button>
           </div>
           <div style={{ height: "calc(100vh - 80px)", overflowY: "scroll" }}>
-            <MessageList me={me} messages={currentChannel?.messages ?? []} key={currentChannel?.messages.length} />
+            <MessageList
+              me={me}
+              messages={currentChannel?.messages ?? []}
+              key={currentChannel?.messages.length}
+            />
           </div>
           <div
             style={{
@@ -355,13 +385,18 @@ const ChatScreen = ({ me, onLogout }: ChatScreenProps) => {
                 setInputMessage("");
                 // Manually trigger the state update to add the new message
                 setCurrentChannel((prevChannel) => {
-                  if (!prevChannel) return prevChannel;
+                  // if (!prevChannel) return prevChannel;
                   const newMessages = [...prevChannel.messages, message];
-                  console.log("Manually updating messages in the state", newMessages);
-                  return {
+                  console.log(
+                    "Manually updating messages in the state",
+                    newMessages
+                  );
+                  const newChannel = {
                     ...prevChannel,
                     messages: newMessages,
                   };
+                  console.log("newChannel:", newChannel);
+                  return newChannel;
                 });
               }}
             >
