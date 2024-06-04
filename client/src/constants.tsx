@@ -1,6 +1,5 @@
 export const mode = "remote";
-// const host = "192.168.55.243";
-export const host = process.env.NETPRO_HOST;
+const host = "192.168.55.243";
 export const apiUrl = `https://${host}:443`;
 export const webSocketUrl = `wss://${host}:5001`;
 

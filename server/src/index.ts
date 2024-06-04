@@ -15,6 +15,7 @@ import {
 import fs from "fs";
 import https from "https";
 import cors from "cors";
+
 interface WSInfo {
   ws: WebSocket;
   wsTokenId: string;
@@ -27,9 +28,13 @@ const sslOptions = {
 };
 
 const app = express();
-// const server = createServer(app);
-// const wss = new Server({ server });
-const wss = new Server({ port: 5001 });
+const useHttps = true;
+const httpsServer = useHttps ? https.createServer(sslOptions, app) : undefined;
+const PORT = useHttps ? 443 : 5000;
+
+const wss = useHttps
+  ? new Server({ server: httpsServer })
+  : new Server({ port: 5001 });
 const wsInfos: WSInfo[] = [];
 
 app.use(cors());
@@ -474,16 +479,12 @@ app.get("*", (req, res) => {
   res.status(404).send(e);
 });
 
-// For remote deploy
-
-const httpsServer = https.createServer(sslOptions, app);
-const PORT = 443;
-httpsServer.listen(PORT, () => {
-  console.log(`HTTPS server is running on port ${PORT}`);
-});
-
-// For local deploy
-
-// app.listen(5000, () => {
-//   console.log("Server is running on port 5000");
-// });
+if (useHttps) {
+  httpsServer!.listen(PORT, () => {
+    console.log(`HTTPS server is running on port ${PORT}`);
+  });
+} else {
+  app.listen(PORT, () => {
+    console.log(`HTTP server is running on port ${PORT}`);
+  });
+}
