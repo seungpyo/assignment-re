@@ -12,12 +12,18 @@ import {
   Message,
   User,
 } from "@seungpyo.hong/netpro-hw";
-
+import fs from "fs";
+import https from "https";
 interface WSInfo {
   ws: WebSocket;
   wsTokenId: string;
   channelId: string | null;
 }
+
+const sslOptions = {
+  key: fs.readFileSync(path.resolve(__dirname, "../server.key")),
+  cert: fs.readFileSync(path.resolve(__dirname, "../server.cert")),
+};
 
 const app = express();
 const server = createServer(app);
@@ -455,7 +461,13 @@ app.get("*", (req, res) => {
   res.status(404).send(e);
 });
 
-const PORT = process.env.PORT || 5000;
-server.listen(PORT, () =>
-  console.log(`Server running on port ${PORT}, URL: http://localhost:${PORT}`)
-);
+// Create the HTTPS server
+const httpsServer = https.createServer(sslOptions, app);
+
+// Define the port to run the HTTPS server
+const PORT = 443;
+
+// Start the HTTPS server
+httpsServer.listen(PORT, () => {
+  console.log(`HTTPS server is running on port ${PORT}`);
+});

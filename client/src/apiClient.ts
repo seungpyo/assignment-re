@@ -1,7 +1,8 @@
 import { Channel, Protocol } from "@seungpyo.hong/netpro-hw/dist/types";
+import { host } from "./constants";
 let token: string | null = null;
 export namespace ApiClient {
-  const apiUrl = "http://localhost:5000";
+  const apiUrl = `https://${host}:443`;
   export const setToken = (newToken: string) => {
     token = newToken;
   };

@@ -7,6 +7,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { host } from "src/constants";
 
 const WebSocketContext = createContext<{
   ws: WebSocket | null;
@@ -28,7 +29,7 @@ export const WebSocketProvider = ({ children }) => {
     if (!wsToken) {
       return;
     }
-    const newWs = new WebSocket(`ws://localhost:5000/ws?wsTokenId=${wsToken}`);
+    const newWs = new WebSocket(`wss://${host}:443/ws?wsTokenId=${wsToken}`);
     setWs(newWs);
   }, [wsToken]);
 

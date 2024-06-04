@@ -126,7 +126,6 @@ const ChatScreen = ({ me, onLogout }: ChatScreenProps) => {
     pc.onicecandidate = (event) => {
       console.log("pc.onicecandidate: event=", event);
       if (event.candidate) {
-        console.log("Sending ICE candidate:", event.candidate);
         if (ws) {
           ws.send(
             JSON.stringify({
@@ -147,7 +146,6 @@ const ChatScreen = ({ me, onLogout }: ChatScreenProps) => {
       console.log("Received remote track:", event.streams[0]);
       setRemoteStream(event.streams[0]);
     };
-    console.log("pc.onicecandidate: pc=", pc);
     setPeerConnection(pc);
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
