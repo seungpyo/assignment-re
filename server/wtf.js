@@ -2,6 +2,9 @@ const WebSocket = require('ws');
 const express = require('express');
 const { createServer } = require('http');
 const app = express();
+app.get("/", (req, res) => {
+  res.send("Hello World");
+});
 const port = 5000;
 // const wss = new WebSocket.Server({ port: 5000 });
 // const wss = new WebSocket.Server({ port:port+1 });
