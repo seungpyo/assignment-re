@@ -29,7 +29,23 @@ export const WebSocketProvider = ({ children }) => {
     if (!wsToken) {
       return;
     }
-    const newWs = new WebSocket(`wss://${host}:443/ws?wsTokenId=${wsToken}`);
+    let newWs: WebSocket;
+    try {
+      newWs = new WebSocket(`wss://${host}:443/?wsTokenId=${wsToken}`);
+      newWs.onopen = () => {
+        console.log("WebSocketProvider: connected");
+      };
+      newWs.onerror = (event) => {
+        console.error("WebSocketProvider: error", event);
+      };
+    } catch (e) {
+      console.error("WebSocketProvider: failed to connect", e);
+      return;
+    }
+    setInterval(() => {
+      console.log("WebSocketProvider: sending ping");
+      newWs.send(JSON.stringify({ type: "ping" }));
+    }, 3 * 1000);
     setWs(newWs);
   }, [wsToken]);
 

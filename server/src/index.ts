@@ -67,8 +67,8 @@ app.use((req, res, next) => {
   res.locals.userId = match.userId;
   next();
 });
-
 wss.on("connection", (ws, req) => {
+  console.log("New WebSocket connection");
   const urlSearchParams = new URLSearchParams(req.url?.split("?")[1]);
   const wsTokenId = urlSearchParams.get("wsTokenId");
   if (!wsTokenId) {
@@ -142,14 +142,15 @@ function handleJoin(message: Protocol.WSMessage, ws: WebSocket) {
 
 function forwardMessage(message: Protocol.WSMessageWithTarget) {
   console.log("Forwarding message to target:", message.target);
-  const webSocketsToSendTo = wsInfos.filter(
-    (wsInfo) =>
-      // wsInfo.channelId === message.target &&
-      wsInfo.ws.readyState === WebSocket.OPEN
-  );
-  webSocketsToSendTo.forEach((wsInfo) => {
-    wsInfo.ws.send(JSON.stringify(message));
-  });
+  wsInfos
+    .filter(
+      (wsInfo) =>
+        // wsInfo.channelId === message.target &&
+        wsInfo.ws.readyState === WebSocket.OPEN
+    )
+    .forEach((wsInfo) => {
+      wsInfo.ws.send(JSON.stringify(message));
+    });
 }
 
 function handleLeave(message: Protocol.WSMessage, ws: WebSocket) {
@@ -437,16 +438,18 @@ app.post("/channels/:channelId/messages", (req, res) => {
   console.log("Message: ", message);
   console.log("wsinfo sample: ", wsInfos[0]);
 
-  wsInfos.forEach((wsInfo) => {
-    wsInfo.ws.send(
-      JSON.stringify({
-        senderId: sender.id,
-        channelId,
-        type: "text",
-        data: JSON.stringify(message),
-      })
-    );
-  });
+  wsInfos
+    .filter((wsInfo) => wsInfo.ws.readyState === WebSocket.OPEN)
+    .forEach((wsInfo) => {
+      wsInfo.ws.send(
+        JSON.stringify({
+          senderId: sender.id,
+          channelId,
+          type: "text",
+          data: JSON.stringify(message),
+        })
+      );
+    });
 });
 
 app.get("/", (req, res) => {

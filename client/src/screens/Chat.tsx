@@ -59,8 +59,9 @@ const ChatScreen = ({ me, onLogout }: ChatScreenProps) => {
       console.error("WebSocket error:", error);
     };
 
-    ws.onclose = () => {
+    ws.onclose = (event) => {
       console.log("WebSocket connection closed");
+      console.log("reason: ", event.reason);
       // Reconnect logic can be added here if necessary
     };
 
