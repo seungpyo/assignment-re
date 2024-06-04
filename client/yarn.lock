@@ -1690,9 +1690,9 @@
   integrity sha512-qC/xYId4NMebE6w/V33Fh9gWxLgURiNYgVNObbJl2LZv0GUUItCcCqC5axQSwRaAgaxl2mELq1rMzlswaQ0Zxg==
 
 "@seungpyo.hong/netpro-hw@^1.0.8":
-  version "1.0.32"
-  resolved "https://registry.yarnpkg.com/@seungpyo.hong/netpro-hw/-/netpro-hw-1.0.32.tgz#a62265af1333e8fffb736ac6c0b6617f44214883"
-  integrity sha512-496cVRDgO8w2ccTaQ+JEyRCLXT6QPUlCaggn9ZsRPyteRHmNm+/ZCn+heO3E1N3WnZBmIC1ZGqhkJ04QnIBo4w==
+  version "1.0.34"
+  resolved "https://registry.yarnpkg.com/@seungpyo.hong/netpro-hw/-/netpro-hw-1.0.34.tgz#f84a6563e5067a6b87442a10cbc9ecfd452fdbc9"
+  integrity sha512-VUI5XG0zimHquxBacB8IaLnv9I39q/SULGV5eHKb+f0BqhbhmRaqZDJ/a0+gCdSY2jnx/lK4al2ODKQbccqGqA==
   dependencies:
     uuid "^9.0.1"
 

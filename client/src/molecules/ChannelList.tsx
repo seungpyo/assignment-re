@@ -106,7 +106,10 @@ const ChannelList = ({
             borderColor: currentChannel === channel ? "blue" : "black",
             borderWidth: 1,
           }}
-          onClick={() => onChannelSelect(channel)}
+          onClick={() => {
+            console.log("Channel selected", channel);
+            return onChannelSelect(channel);
+          }}
         >
           <h3>{channel.name}</h3>
           <h6>{channel.id}</h6>

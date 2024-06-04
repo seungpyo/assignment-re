@@ -7,6 +7,8 @@ interface MessageListProps {
 }
 
 const MessageList = ({ me, messages }: MessageListProps) => {
+  console.log("MessageList rendering with messages:", messages);
+
   if (messages.length === 0) {
     return <div>No messages</div>;
   }

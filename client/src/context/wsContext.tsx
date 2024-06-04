@@ -7,6 +7,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { apiUrl, webSocketUrl } from "src/constants";
 
 const WebSocketContext = createContext<{
   ws: WebSocket | null;
@@ -23,13 +24,28 @@ export const WebSocketProvider = ({ children }) => {
   const [callbacks, setCallbacks] = useState<{
     [type in Protocol.WSMessageType]?: (message: Protocol.WSMessage) => void;
   }>({});
+
   useEffect(() => {
     if (!wsToken) {
       return;
     }
-    const newWs = new WebSocket(`ws://localhost:5000/ws?wsTokenId=${wsToken}`);
+    let newWs: WebSocket;
+    try {
+      console.log(`Try to connect to ${webSocketUrl}/?wsTokenId=${wsToken}`);
+      newWs = new WebSocket(`${webSocketUrl}/?wsTokenId=${wsToken}`);
+      newWs.onopen = () => {
+        console.log("WebSocketProvider: connected");
+      };
+      newWs.onerror = (event) => {
+        console.error("WebSocketProvider: error", event);
+      };
+    } catch (e) {
+      console.error("WebSocketProvider: failed to connect", e);
+      return;
+    }
     setWs(newWs);
   }, [wsToken]);
+
   useEffect(() => {
     if (!ws) {
       return;
@@ -40,19 +56,23 @@ export const WebSocketProvider = ({ children }) => {
       callbacks[message.type]?.(message);
     };
   }, [ws, callbacks]);
+
   const registerWSCallback = useCallback(
     (type: string, callback: (message: Protocol.WSMessage) => void) => {
       setCallbacks((prev) => ({ ...prev, [type]: callback }));
     },
     []
   );
+
   const wsConnect = useCallback(({ wsToken }: { wsToken: string }) => {
     setWsToken(wsToken);
   }, []);
+
   const value = useMemo(
     () => ({ ws, wsConnect, registerWSCallback }),
     [registerWSCallback, ws, wsConnect]
   );
+
   return (
     <WebSocketContext.Provider value={value}>
       {children}
