@@ -10,7 +10,7 @@ import {
   AuthToken,
   Channel,
   Message,
-  User
+  User,
 } from "@seungpyo.hong/netpro-hw";
 
 interface WSInfo {
@@ -107,18 +107,18 @@ wss.on("connection", (ws, req) => {
 function handleMessage(message: Protocol.WSMessage, ws: WebSocket) {
   console.log("Handling message of type:", message.type);
   switch (message.type) {
-    case 'join':
+    case "join":
       handleJoin(message, ws);
       break;
-    case 'leave':
+    case "leave":
       handleLeave(message, ws);
       break;
-    case 'text':
-    case 'voice':
-    case 'video':
-    case 'video-offer':
-    case 'video-answer':
-    case 'new-ice-candidate':
+    case "text":
+    case "voice":
+    case "video":
+    case "video-offer":
+    case "video-answer":
+    case "new-ice-candidate":
       forwardMessage(message);
       break;
   }
@@ -134,11 +134,16 @@ function handleJoin(message: Protocol.WSMessage, ws: WebSocket) {
   console.log(`User ${wsInfo.wsTokenId} joined channel ${message.channelId}`);
 }
 
-function forwardMessage(message: Protocol.WSMessage) {
+function forwardMessage(message: Protocol.WSMessageWithTarget) {
   console.log("Forwarding message to target:", message.target);
   wsInfos.forEach((client) => {
-    console.log(`Checking client ${client.wsTokenId} for target ${message.target} and channel ${client.channelId}`);
-    if (client.channelId === message.target && client.ws.readyState === WebSocket.OPEN) {
+    console.log(
+      `Checking client ${client.wsTokenId} for target ${message.target} and channel ${client.channelId}`
+    );
+    if (
+      client.channelId === message.target &&
+      client.ws.readyState === WebSocket.OPEN
+    ) {
       console.log("Sending message to client:", client.wsTokenId);
       client.ws.send(JSON.stringify(message));
     }
@@ -160,12 +165,12 @@ function handleUserDisconnect(ws: WebSocket) {
   if (wsIndex !== -1) {
     const wsInfo = wsInfos[wsIndex];
     if (wsInfo.channelId) {
-      const leaveMessage: Protocol.WSMessage = {
+      const leaveMessage: Protocol.WSMessageWithTarget = {
         senderId: wsInfo.wsTokenId,
         channelId: wsInfo.channelId,
-        type: 'leave',
-        data: '',
-        target: wsInfo.channelId
+        type: "leave",
+        data: "",
+        target: wsInfo.channelId,
       };
       handleMessage(leaveMessage, ws);
     }
@@ -448,8 +453,8 @@ app.get("/", (req, res) => {
 
 app.get("*", (req, res) => {
   const e: Protocol.ErrorResponse = {
-      statusCode: 404,
-      message: `Not found: ${req.path}`,
+    statusCode: 404,
+    message: `Not found: ${req.path}`,
   };
   res.status(404).send(e);
 });

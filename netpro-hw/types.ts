@@ -108,11 +108,22 @@ export namespace Protocol {
     participants: User[];
   }
 
-  export type WSMessageType = "join" | "leave" | "text" | "voice" | "video";
+  export type WSMessageType =
+    | "join"
+    | "leave"
+    | "text"
+    | "voice"
+    | "video"
+    | "video-offer"
+    | "video-answer"
+    | "new-ice-candidate";
   export interface WSMessage {
     senderId: string;
     channelId: string;
     type: WSMessageType;
     data: string;
+  }
+  export interface Protocol.WSMessageWithTarget extends Protocol.WSMessage {
+    target?: string;
   }
 }
