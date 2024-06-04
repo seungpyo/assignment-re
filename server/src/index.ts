@@ -464,13 +464,16 @@ app.get("*", (req, res) => {
   res.status(404).send(e);
 });
 
-// Create the HTTPS server
-const httpsServer = https.createServer(sslOptions, app);
+// For remote deploy
 
-// Define the port to run the HTTPS server
-const PORT = 443;
+// const httpsServer = https.createServer(sslOptions, app);
+// const PORT = 443;
+// httpsServer.listen(PORT, () => {
+//   console.log(`HTTPS server is running on port ${PORT}`);
+// });
 
-// Start the HTTPS server
-httpsServer.listen(PORT, () => {
-  console.log(`HTTPS server is running on port ${PORT}`);
+// For local deploy
+
+app.listen(5000, () => {
+  console.log("Server is running on port 5000");
 });

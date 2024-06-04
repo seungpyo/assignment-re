@@ -7,7 +7,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import { host } from "src/constants";
+import { apiUrl, webSocketUrl } from "src/constants";
 
 const WebSocketContext = createContext<{
   ws: WebSocket | null;
@@ -31,7 +31,7 @@ export const WebSocketProvider = ({ children }) => {
     }
     let newWs: WebSocket;
     try {
-      newWs = new WebSocket(`wss://${host}:443/?wsTokenId=${wsToken}`);
+      newWs = new WebSocket(`${webSocketUrl}/?wsTokenId=${wsToken}`);
       newWs.onopen = () => {
         console.log("WebSocketProvider: connected");
       };
@@ -42,10 +42,6 @@ export const WebSocketProvider = ({ children }) => {
       console.error("WebSocketProvider: failed to connect", e);
       return;
     }
-    setInterval(() => {
-      console.log("WebSocketProvider: sending ping");
-      newWs.send(JSON.stringify({ type: "ping" }));
-    }, 3 * 1000);
     setWs(newWs);
   }, [wsToken]);
 
