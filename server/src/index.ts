@@ -14,6 +14,7 @@ import {
 } from "@seungpyo.hong/netpro-hw";
 import fs from "fs";
 import https from "https";
+import cors from "cors";
 interface WSInfo {
   ws: WebSocket;
   wsTokenId: string;
@@ -31,6 +32,7 @@ const app = express();
 const wss = new Server({ port: 5001 });
 const wsInfos: WSInfo[] = [];
 
+app.use(cors());
 app.use(express.static(path.resolve(__dirname, "../../client/build")));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -460,6 +462,7 @@ app.post("/channels/:channelId/messages", (req, res) => {
 });
 
 app.get("/", (req, res) => {
+  console.log("GET /");
   res.sendFile(path.resolve(__dirname, "../../client/build", "index.html"));
 });
 
@@ -473,14 +476,14 @@ app.get("*", (req, res) => {
 
 // For remote deploy
 
-// const httpsServer = https.createServer(sslOptions, app);
-// const PORT = 443;
-// httpsServer.listen(PORT, () => {
-//   console.log(`HTTPS server is running on port ${PORT}`);
-// });
+const httpsServer = https.createServer(sslOptions, app);
+const PORT = 443;
+httpsServer.listen(PORT, () => {
+  console.log(`HTTPS server is running on port ${PORT}`);
+});
 
 // For local deploy
 
-app.listen(5000, () => {
-  console.log("Server is running on port 5000");
-});
+// app.listen(5000, () => {
+//   console.log("Server is running on port 5000");
+// });
