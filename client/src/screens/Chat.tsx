@@ -99,13 +99,16 @@ const ChatScreen = ({ me, onLogout }: ChatScreenProps) => {
   }, [remoteStream]);
 
   const handleNewMessage = (msg: Protocol.WSMessage) => {
+    console.log("Received new message:", msg);
     const message = msg as Protocol.WSMessageWithTarget;
     if (message.channelId === currentChannel?.id) {
       setCurrentChannel((prevChannel) => {
         if (!prevChannel) return prevChannel;
+        const newMessages = [...prevChannel.messages, JSON.parse(message.data)];
+        console.log("Updating messages in the state", newMessages);
         return {
           ...prevChannel,
-          messages: [...prevChannel.messages, JSON.parse(message.data)],
+          messages: newMessages,
         };
       });
     }
@@ -319,7 +322,7 @@ const ChatScreen = ({ me, onLogout }: ChatScreenProps) => {
             <button onClick={disconnectCall}>Disconnect</button>
           </div>
           <div style={{ height: "calc(100vh - 80px)", overflowY: "scroll" }}>
-            <MessageList me={me} messages={currentChannel?.messages ?? []} />
+            <MessageList me={me} messages={currentChannel?.messages ?? []} key={currentChannel?.messages.length} />
           </div>
           <div
             style={{
@@ -350,6 +353,16 @@ const ChatScreen = ({ me, onLogout }: ChatScreenProps) => {
                 });
                 setIsSending(false);
                 setInputMessage("");
+                // Manually trigger the state update to add the new message
+                setCurrentChannel((prevChannel) => {
+                  if (!prevChannel) return prevChannel;
+                  const newMessages = [...prevChannel.messages, message];
+                  console.log("Manually updating messages in the state", newMessages);
+                  return {
+                    ...prevChannel,
+                    messages: newMessages,
+                  };
+                });
               }}
             >
               {isSending ? "Sending..." : "Send"}
