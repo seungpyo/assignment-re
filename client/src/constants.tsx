@@ -1,5 +1,5 @@
 export const mode = "remote";
-const host = "192.168.55.243";
+const host = "172.16.97.71";
 export const apiUrl = `https://${host}:443`;
 // export const webSocketUrl = `wss://${host}:5001`;
 export const webSocketUrl = `wss://${host}:443`;

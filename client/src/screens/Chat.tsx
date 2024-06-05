@@ -18,8 +18,11 @@ const ChatScreen = ({ me, onLogout }: ChatScreenProps) => {
   const [isSending, setIsSending] = useState(false);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
-  const [peerConnection, setPeerConnection] =
-    useState<RTCPeerConnection | null>(null);
+  // const [peerConnection, setPeerConnection] =
+  //   useState<RTCPeerConnection | null>(null);
+  const [peerConnectionOfUser, setPeerConnectionOfUser] = useState<{
+    [key: string]: RTCPeerConnection;
+  }>({});
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const { registerWSCallback, ws } = useWebSocket();
@@ -61,13 +64,19 @@ const ChatScreen = ({ me, onLogout }: ChatScreenProps) => {
 
       const pc = new RTCPeerConnection();
       console.log("handleVideoOffer: pc=", pc);
-      setPeerConnection(pc);
+      // setPeerConnection(pc);
+      setPeerConnectionOfUser((prev) => {
+        return {
+          ...prev,
+          [message.senderId]: pc,
+        };
+      });
 
       const stream = await navigator.mediaDevices.getUserMedia({
         video: true,
         audio: true,
       });
-      setLocalStream(stream);
+      setLocalStream((prev) => prev ?? stream);
       stream.getTracks().forEach((track) => pc.addTrack(track, stream));
       console.log("Tracks added to RTCPeerConnection.");
 
@@ -122,13 +131,25 @@ const ChatScreen = ({ me, onLogout }: ChatScreenProps) => {
     async (msg: Protocol.WSMessage) => {
       console.log("Received SDP answer:", msg.data);
       const message = msg as Protocol.WSMessageWithTarget;
-      if (!message.target || message.target !== me.id) return;
+      if (!message.target || message.target !== me.id) {
+        console.log("Target is not me");
+        console.log("message", message);
+        console.log("me", me);
+        return;
+      }
 
-      const pc = peerConnection!;
+      const pc = peerConnectionOfUser[message.senderId];
+      if (!pc) {
+        console.error("PeerConnection is not available for the answer");
+        console.error("peerConnectionOfUser:", peerConnectionOfUser);
+        console.error("message:", message);
+        return;
+      }
       const desc = new RTCSessionDescription(JSON.parse(message.data));
+      console.log("handleVideoAnswer: setting remote description: ", desc);
       await pc.setRemoteDescription(desc);
     },
-    [me.id, peerConnection]
+    [me, peerConnectionOfUser]
   );
 
   const handleNewICECandidate = useCallback(
@@ -136,53 +157,59 @@ const ChatScreen = ({ me, onLogout }: ChatScreenProps) => {
       if (msg.target !== currentChannel?.id) return;
       console.log("Received new ICE candidate:", msg.data);
       const message = msg as Protocol.WSMessageWithTarget;
-      if (!message.target || message.target !== currentChannel?.id) return;
-      console.log("peerConnection:");
-      console.log(peerConnection);
-      const pc = peerConnection!;
+      if (!message.target || message.target !== currentChannel?.id) {
+        console.log("Target is not me");
+        console.log("message", message);
+        console.log("me", me);
+      }
+      const pc = peerConnectionOfUser[message.senderId];
+      if (!pc) {
+        console.error("PeerConnection is not available for the ICE candidate");
+        console.error("peerConnectionOfUser:", peerConnectionOfUser);
+        console.error("message:", message);
+        return;
+      }
       const candidate = new RTCIceCandidate(JSON.parse(message.data));
       await pc.addIceCandidate(candidate);
     },
-    [currentChannel?.id, peerConnection]
+    [currentChannel?.id, me, peerConnectionOfUser]
   );
 
   const disconnectCall = useCallback(() => {
     console.log("Disconnecting call...");
-    if (peerConnection) {
-      peerConnection.close();
-      setPeerConnection(null);
+    Object.values(peerConnectionOfUser).forEach((pc) => pc?.close());
+    setPeerConnectionOfUser({});
 
-      if (localStream) {
-        localStream.getTracks().forEach((track) => track.stop());
-        setLocalStream(null);
-      }
+    if (localStream) {
+      localStream.getTracks().forEach((track) => track.stop());
+      setLocalStream(null);
+    }
 
-      if (remoteStream) {
-        remoteStream.getTracks().forEach((track) => track.stop());
-        setRemoteStream(null);
-      }
+    if (remoteStream) {
+      remoteStream.getTracks().forEach((track) => track.stop());
+      setRemoteStream(null);
+    }
 
-      if (ws) {
-        ws.send(
-          JSON.stringify({
-            senderId: me.id,
-            channelId: currentChannel?.id || "",
-            type: "leave" as Protocol.WSMessageType,
-            data: "",
-            target: currentChannel?.id || "",
-          })
-        );
-      } else {
-        console.error("WebSocket is not available for sending leave message");
-      }
+    if (ws) {
+      ws.send(
+        JSON.stringify({
+          senderId: me.id,
+          channelId: currentChannel?.id || "",
+          type: "leave" as Protocol.WSMessageType,
+          data: "",
+          target: currentChannel?.id || "",
+        })
+      );
+    } else {
+      console.error("WebSocket is not available for sending leave message");
     }
   }, [
-    currentChannel?.id,
-    me.id,
-    peerConnection,
-    remoteStream,
+    peerConnectionOfUser,
     localStream,
+    remoteStream,
     ws,
+    me.id,
+    currentChannel?.id,
   ]);
 
   const handleLeave = useCallback(
@@ -267,7 +294,7 @@ const ChatScreen = ({ me, onLogout }: ChatScreenProps) => {
       video: true,
       audio: true,
     });
-    setLocalStream(stream);
+    setLocalStream((prev) => prev ?? stream);
     console.log("Local stream set.");
 
     const pc = new RTCPeerConnection();
@@ -297,7 +324,12 @@ const ChatScreen = ({ me, onLogout }: ChatScreenProps) => {
       console.log("Received remote track:", event.streams[0]);
       setRemoteStream(event.streams[0]);
     };
-    setPeerConnection(pc);
+    setPeerConnectionOfUser((prev) => {
+      return {
+        ...prev,
+        [me.id]: pc,
+      };
+    });
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
     console.log("Sending SDP offer:", offer);
