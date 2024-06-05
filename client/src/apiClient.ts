@@ -1,5 +1,6 @@
 import { Channel, Protocol } from "@seungpyo.hong/netpro-hw/dist/types";
 import { apiUrl } from "./constants";
+import { errorOf } from "@seungpyo.hong/netpro-hw";
 let token: string | null = null;
 export namespace ApiClient {
   export const setToken = (newToken: string) => {
@@ -145,5 +146,14 @@ export namespace ApiClient {
       body: JSON.stringify({ channelId, content }),
     });
     return response.json() as Promise<Protocol.SendMessageResponse>;
+  };
+
+  export const exitChannel = async ({ channelId }: { channelId: string }) => {
+    const response = await fetch(`${apiUrl}/channels/${channelId}/exit`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
   };
 }

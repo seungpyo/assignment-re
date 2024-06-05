@@ -444,14 +444,6 @@ app.post("/channels/:channelId/messages", (req, res) => {
   writeDB(db);
   const r: Protocol.SendMessageResponse = { message };
   res.json(r);
-  console.log("Sending message to ", wsInfos.length, " clients");
-  console.log("Message: ", message);
-  console.log("wsinfo sample: ", wsInfos[0]);
-
-  console.log(
-    "Open clients: ",
-    wsInfos.filter((wsInfo) => wsInfo.ws.readyState === WebSocket.OPEN).length
-  );
   wsInfos
     .filter((wsInfo) => wsInfo.ws.readyState === WebSocket.OPEN)
     .forEach((wsInfo) => {
@@ -464,6 +456,40 @@ app.post("/channels/:channelId/messages", (req, res) => {
         })
       );
     });
+});
+
+app.post("/channels/:channelId/exit", (req, res) => {
+  const { channelId } = req.params;
+  const { userId } = res.locals;
+  const db: DB = res.locals.db;
+  const channel = db.channels.find((c) => c.id === channelId);
+  if (!channel) {
+    const e: Protocol.ErrorResponse = {
+      statusCode: 404,
+      message: "Channel not found",
+    };
+    return res.status(404).json(e);
+  }
+  const index = channel.participants.findIndex((p) => p.id === userId);
+  if (index === -1) {
+    const e: Protocol.ErrorResponse = {
+      statusCode: 403,
+      message: "Forbidden",
+    };
+    return res.status(403).json(e);
+  }
+  channel.participants.splice(index, 1);
+  wsInfos.forEach((wsInfo) => {
+    const msg: Protocol.WSMessage = {
+      senderId: userId,
+      channelId,
+      type: "leave",
+      data: JSON.stringify({ userId }),
+    };
+    wsInfo.ws.send(JSON.stringify(msg));
+  });
+  writeDB(db);
+  res.json();
 });
 
 app.get("/", (req, res) => {
