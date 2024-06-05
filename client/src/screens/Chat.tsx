@@ -25,7 +25,22 @@ const ChatScreen = ({ me, onLogout }: ChatScreenProps) => {
   }>({});
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  const [channels, setChannels] = useState<Channel[]>([]);
   const { registerWSCallback, ws } = useWebSocket();
+
+  useEffect(() => {
+    // Fetch initial channel list
+    ApiClient.getChannels().then((response) => {
+      const e = errorOf(response);
+      if (e) {
+        console.error("Failed to get channels:", e);
+        return;
+      }
+      if ('channels' in response) {
+        setChannels(response.channels);
+      }
+    });
+  }, []);
 
   const handleNewMessage = useCallback(
     (msg: Protocol.WSMessage) => {
@@ -216,14 +231,8 @@ const ChatScreen = ({ me, onLogout }: ChatScreenProps) => {
     console.log("Exiting channel...");
     if (currentChannel) {
       await ApiClient.exitChannel({ channelId: currentChannel.id });
+      setChannels((prevChannels) => prevChannels.filter(c => c.id !== currentChannel.id));
       setCurrentChannel(null);
-      await ApiClient.getChannels().then((channels) => {
-        const e = errorOf(channels);
-        if (e) {
-          console.error("Failed to get channels:", e);
-          return;
-        }
-      });
       console.log("Exited channel:", currentChannel);
     }
   }, [currentChannel]);
@@ -308,7 +317,6 @@ const ChatScreen = ({ me, onLogout }: ChatScreenProps) => {
     ws.onclose = (event) => {
       console.log("WebSocket connection closed");
       console.log("reason: ", event.reason);
-      // Reconnect logic can be added here if necessary
     };
 
     console.log("Registering WebSocket callbacks");
@@ -417,11 +425,12 @@ const ChatScreen = ({ me, onLogout }: ChatScreenProps) => {
     <div style={{ display: "flex", height: "100vh" }}>
       <ChannelList
         me={me}
+        channels={channels}
         currentChannel={currentChannel}
         onChannelSelect={(c) => {
-          console.log("Channel selected in ChannelListItem", c);
           setCurrentChannel(c);
         }}
+        setChannels={setChannels}
       />
       <div style={styles.chatScreenBody}>
         <div style={{ flex: 1 }}>

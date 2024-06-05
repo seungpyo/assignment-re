@@ -1,35 +1,28 @@
-import { Channel, errorOf, Protocol, User } from "@seungpyo.hong/netpro-hw";
-import { useEffect, useState } from "react";
+import { Channel, errorOf, User, Protocol } from "@seungpyo.hong/netpro-hw";
+import { useState } from "react";
 import { ApiClient } from "src/apiClient";
 import { useWebSocket } from "src/context/wsContext";
 
 interface ChannelListProps {
   me: User;
+  channels: Channel[];
   currentChannel: Channel | null;
   onChannelSelect: (channel: Channel) => void;
+  setChannels: (channels: Channel[]) => void;
 }
 
 const ChannelList = ({
   me,
+  channels,
   currentChannel,
   onChannelSelect,
+  setChannels,
 }: ChannelListProps) => {
   const { ws } = useWebSocket();
-  const [channels, setChannels] = useState<Channel[]>([]);
   const [showChannelCreateDialog, setShowChannelCreateDialog] = useState(false);
   const [showChannelJoinDialog, setShowChannelJoinDialog] = useState(false);
   const [newChannelName, setNewChannelName] = useState("");
   const [joinChannelId, setJoinChannelId] = useState("");
-
-  useEffect(() => {
-    ApiClient.getChannels().then((response) => {
-      if (errorOf(response)) {
-        alert(errorOf(response)?.message);
-        return;
-      }
-      setChannels((response as Protocol.GetChannelsResponse).channels);
-    });
-  }, []);
 
   return (
     <div style={styles.channelList}>
