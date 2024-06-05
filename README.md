@@ -16,8 +16,10 @@ yarn start
 
 # How to test
 
-1. IP 주소 설정
+1. IP 주소 및 branch 설정
 
+- 최신 코드가 존재하는 branch (`exitroom`)로 이동
+  - `git checkout exitroom`
 - `ifconfig`, `ipconfig` 등으로 LAN 주소 확인
 - `client/src/constants.tsx`에서 `host` 변수에 IPv4 주소 입력
 - `server/src/index.ts`에서 `const useHttps = true`로 설정
