@@ -1,7 +1,7 @@
 # Before you start
 
 ```bash
-yarn && cd server && yarn && cd ../client && yarn && cd ..
+yarn && cd server && yarn && yarn add -D nodemon && cd ../client && yarn && cd ..
 ```
 
 # How to run server
